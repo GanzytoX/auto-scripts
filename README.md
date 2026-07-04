@@ -1,43 +1,56 @@
-# Script Updater and Manager
+# Auto Scripts
 
-This repository contains a set of tools and scripts designed to automate the detection and update of applications, global packages, and drivers on Windows and macOS.
+A collection of clean, interactive automation scripts to manage updates for packages, applications, and drivers across Windows and macOS.
 
-## Project Structure
+---
 
-- **`win/`**: Scripts optimized for Windows operating systems.
-  - **[detect-and-update-apps.ps1](win/detect-and-update-apps.ps1)**: Performs a consolidated scan of the Windows Registry (HKLM/HKCU, 32-bit and 64-bit), Microsoft Store applications (Appx/Winget), and global development environments (NPM/PNPM). It carries out interactive and secure updates using individual _Just-In-Time_ administrator elevation.
-  - **[detect-and-update-drivers.ps1](win/detect-and-update-drivers.ps1)**: Scans your computer's hardware devices and queries official driver updates through the Windows Update COM API. It allows interactive installation and detects if a system restart is required.
-  - **[get-global-packages.ps1](win/get-global-packages.ps1)**: Helper script to list global packages installed on the system.
-  - **[get-node-info.ps1](win/get-node-info.ps1)**: Helper script to retrieve local Node.js environment information.
-  - **[update-npm.ps1](win/update-npm.ps1)**: Helper script to update NPM to the latest global version.
-  - **[update-pnpm.ps1](win/update-pnpm.ps1)**: Helper script to update PNPM to the latest global version.
+## 🚀 Features
 
-- **`mac/`**: Scripts optimized for macOS automation.
-  - **[brew_update.sh](mac/brew_update.sh)**: Helper script to update Homebrew repositories, upgrade outdated formulae and casks, and clean up temporary files.
-  - **[check_node.sh](mac/check_node.sh)**: Script to check Node.js status, retrieve recent major release lines, and update/install Node.js.
-  - **[update_pnpm.sh](mac/update_pnpm.sh)**: Helper script to check and update PNPM to the latest version.
+- **Cross-Platform**: Tailored automation for Windows (PowerShell) and macOS (zsh).
+- **Consolidated Scan**: Searches Windows Registry, Microsoft Store, NPM, and PNPM in one go.
+- **Smart Elevation**: Requests Administrator privileges _Just-In-Time_ only when an install requires them.
+- **Driver Updates**: Queries the native Windows Update COM API to update outdated hardware drivers.
 
-## Requirements and Configuration on Windows
+---
 
-To execute PowerShell scripts, you must allow the execution of local scripts in your terminal. Open PowerShell and run:
+## 📂 Project Structure
+
+### 🪟 Windows (`win/`)
+
+- **[detect-and-update-apps.ps1](win/detect-and-update-apps.ps1)**: Scans Registry, Microsoft Store (Appx/Winget), and NPM/PNPM to execute interactive, secure application updates.
+- **[detect-and-update-drivers.ps1](win/detect-and-update-drivers.ps1)**: Scans hardware devices and installs driver updates via the Windows Update API.
+- **[get-global-packages.ps1](win/get-global-packages.ps1)**: Lists globally installed NPM and PNPM packages.
+- **[get-node-info.ps1](win/get-node-info.ps1)**: Retrieves detailed environment stats for Node.js.
+- **[update-npm.ps1](win/update-npm.ps1)**: Updates NPM globally to the latest version.
+- **[update-pnpm.ps1](win/update-pnpm.ps1)**: Detects installation type (NPM/standalone/corepack) and upgrades PNPM.
+
+### 🍎 macOS (`mac/`)
+
+- **[brew_update.sh](mac/brew_update.sh)**: Updates Homebrew formulae/casks and performs cleanup.
+- **[check_node.sh](mac/check_node.sh)**: Checks current Node.js version and recommends updates via detected managers (fnm, nvm, brew, pnpm).
+- **[update_pnpm.sh](mac/update_pnpm.sh)**: Upgrades PNPM using the detected runtime manager.
+
+---
+
+## 🛠️ Requirements & Setup (Windows)
+
+To run PowerShell scripts on Windows, execution policies must allow local scripts. Open PowerShell and run:
 
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-## Usage
+---
 
-### Updating Applications (Winget, MS Store, NPM, etc.)
+## 💻 Usage
 
-Run the script in your normal user terminal. If an installation requires administrator privileges, the script will elevate individually in a temporary pop-up window:
+### Update Applications (Winget, MS Store, NPM, etc.)
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\win\detect-and-update-apps.ps1
 ```
 
-### Updating Drivers (Windows Only)
-
-To search for and install official hardware driver updates for your computer:
+### Update System Drivers
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\win\detect-and-update-drivers.ps1
@@ -45,4 +58,4 @@ powershell -ExecutionPolicy Bypass -File .\win\detect-and-update-drivers.ps1
 
 ---
 
-Created with ❤️ to optimize productivity and system maintenance.
+_Made with ❤️ by **GonzaDev** to optimize system productivity and maintenance._
