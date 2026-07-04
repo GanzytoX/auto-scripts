@@ -1,15 +1,15 @@
 <#
 .SYNOPSIS
-    Escanea todos los dispositivos de hardware de la computadora
-    y busca/instala actualizaciones de controladores (drivers) desde Windows Update.
+    Scans all computer hardware devices
+    and checks/installs driver updates from Windows Update.
 .DESCRIPTION
-    Este script consulta los dispositivos conectados mediante PnpDevice, busca actualizaciones
-    de controladores usando la API nativa de Windows Update, y permite instalarlas de forma interactiva.
+    This script queries connected devices using PnpDevice, searches for driver
+    updates using the native Windows Update API, and allows interactive installations.
 #>
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# Colores premium para la terminal
+# Premium terminal colors
 $ColorPrimary = "Cyan"
 $ColorSuccess = "Green"
 $ColorWarning = "Yellow"
@@ -20,7 +20,7 @@ $ColorInfo = "White"
 function Show-Header {
     Clear-Host
     Write-Host "=========================================================" -ForegroundColor $ColorPrimary
-    Write-Host "         DETECTOR Y GESTOR DE DRIVERS TOTAL" -ForegroundColor $ColorPrimary
+    Write-Host "         TOTAL DRIVER DETECTOR AND MANAGER" -ForegroundColor $ColorPrimary
     Write-Host "=========================================================" -ForegroundColor $ColorPrimary
     Write-Host ""
 }
@@ -31,17 +31,17 @@ function Test-IsAdmin {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-# --- Flujo Principal del Script ---
+# --- Main Script Flow ---
 
 Show-Header
 
-# 1. Verificar Elevacion de Privilegios
+# 1. Verify Privilege Elevation
 $IsAdmin = Test-IsAdmin
 if (-not $IsAdmin) {
-    Write-Host "[ADVERTENCIA] No estas ejecutando este script como Administrador." -ForegroundColor $ColorWarning
-    Write-Host "              La instalacion de controladores requiere privilegios elevados." -ForegroundColor $ColorWarning
+    Write-Host "[WARNING] You are not running this script as Administrator." -ForegroundColor $ColorWarning
+    Write-Host "          Installing drivers requires elevated privileges." -ForegroundColor $ColorWarning
     Write-Host ""
-    Write-Host "Deseas reiniciar este script como Administrador automaticamente? [S] Si / [N] No: " -NoNewline -ForegroundColor $ColorInfo
+    Write-Host "Do you want to restart this script as Administrator automatically? [Y] Yes / [N] No: " -NoNewline -ForegroundColor $ColorInfo
     
     $key = $null
     try {
@@ -54,38 +54,38 @@ if (-not $IsAdmin) {
         $key = $resp.Trim().ToUpper()
     }
     
-    if ($key -eq "S" -or $key -eq "`r" -or $key -eq "`n") {
+    if ($key -eq "Y" -or $key -eq "`r" -or $key -eq "`n") {
         Write-Host ""
-        Write-Host "[+] Reiniciando como Administrador..." -ForegroundColor $ColorSuccess
+        Write-Host "[+] Restarting as Administrator..." -ForegroundColor $ColorSuccess
         try {
             $psPath = (Get-Process -Id $PID).Path
             Start-Process $psPath -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
             exit
         }
         catch {
-            Write-Host "[ERROR] No se pudo elevar privilegios: $_" -ForegroundColor $ColorError
-            Write-Host "Continuando en modo no administrador..." -ForegroundColor $ColorMuted
+            Write-Host "[ERROR] Could not elevate privileges: $_" -ForegroundColor $ColorError
+            Write-Host "Continuing in non-administrator mode..." -ForegroundColor $ColorMuted
             Write-Host ""
         }
     } else {
         Write-Host ""
-        Write-Host "Continuando en modo no administrador..." -ForegroundColor $ColorMuted
+        Write-Host "Continuing in non-administrator mode..." -ForegroundColor $ColorMuted
         Write-Host ""
     }
 }
 
-# 2. Escanear Hardware
-Write-Host "[+] Iniciando escaneo de hardware de tu laptop... Por favor espera." -ForegroundColor $ColorPrimary
+# 2. Scan Hardware
+Write-Host "[+] Starting hardware scan of your laptop... Please wait." -ForegroundColor $ColorPrimary
 Write-Host ""
 
-Write-Host "[-] Detectando dispositivos conectados... " -NoNewline -ForegroundColor $ColorInfo
+Write-Host "[-] Detecting connected devices... " -NoNewline -ForegroundColor $ColorInfo
 $pnpDevices = Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue
-Write-Host "Hecho ($($pnpDevices.Count) dispositivos detectados)" -ForegroundColor $ColorSuccess
+Write-Host "Done ($($pnpDevices.Count) devices detected)" -ForegroundColor $ColorSuccess
 
-# Clasificacion por clase
+# Classification by class
 $grouped = $pnpDevices | Group-Object Class -NoElement | Sort-Object Count -Descending
 Write-Host ""
-Write-Host "Resumen de hardware por categoria:" -ForegroundColor $ColorMuted
+Write-Host "Hardware summary by category:" -ForegroundColor $ColorMuted
 foreach ($grp in $grouped) {
     if ($grp.Name) {
         Write-Host "    -> $($grp.Name): $($grp.Count)" -ForegroundColor $ColorInfo
@@ -93,36 +93,36 @@ foreach ($grp in $grouped) {
 }
 Write-Host ""
 
-# 3. Buscar actualizaciones de drivers
-Write-Host "[+] Buscando controladores desactualizados en Windows Update..." -ForegroundColor $ColorPrimary
-Write-Host "    (Esto puede tomar un momento, consultando servidores oficiales)..." -ForegroundColor $ColorMuted
+# 3. Check for driver updates
+Write-Host "[+] Checking for outdated drivers in Windows Update..." -ForegroundColor $ColorPrimary
+Write-Host "    (This may take a moment, querying official servers)..." -ForegroundColor $ColorMuted
 Write-Host ""
 
 $updateSession = New-Object -ComObject Microsoft.Update.Session
 $updateSearcher = $updateSession.CreateUpdateSearcher()
 
-# Filtrar por controladores no instalados
+# Filter for uninstalled drivers
 try {
     $searchResult = $updateSearcher.Search("IsInstalled=0 and Type='Driver'")
     $allUpgrades = $searchResult.Updates
 }
 catch {
-    Write-Host "[ERROR] Hubo un problema al buscar actualizaciones: $_" -ForegroundColor $ColorError
+    Write-Host "[ERROR] There was a problem checking for updates: $_" -ForegroundColor $ColorError
     Write-Host ""
-    Write-Host "Presiona cualquier tecla para salir..." -ForegroundColor $ColorMuted
+    Write-Host "Press any key to exit..." -ForegroundColor $ColorMuted
     try { [void][Console]::ReadKey($true) } catch { Read-Host }
     exit 1
 }
 
 if ($allUpgrades.Count -eq 0) {
-    Write-Host "[OK] ¡Felicidades! Todos los controladores de tu laptop estan al dia." -ForegroundColor $ColorSuccess
+    Write-Host "[OK] Congratulations! All drivers on your laptop are up to date." -ForegroundColor $ColorSuccess
     Write-Host ""
     
-    $viewAll = Read-Host "¿Deseas ver la lista completa de todos los dispositivos de hardware detectados? (S/N)"
-    if ($viewAll.Trim().ToUpper() -eq "S") {
+    $viewAll = Read-Host "Do you want to see the full list of all detected hardware devices? (Y/N)"
+    if ($viewAll.Trim().ToUpper() -eq "Y") {
         Write-Host ""
-        Write-Host ("{0,-60} {1,-20} {2}" -f "Nombre del Dispositivo", "Categoria", "Estado") -ForegroundColor $ColorPrimary
-        Write-Host ("{0,-60} {1,-20} {2}" -f "----------------------", "---------", "------") -ForegroundColor $ColorMuted
+        Write-Host ("{0,-60} {1,-20} {2}" -f "Device Name", "Category", "Status") -ForegroundColor $ColorPrimary
+        Write-Host ("{0,-60} {1,-20} {2}" -f "-----------", "--------", "------") -ForegroundColor $ColorMuted
         foreach ($dev in $pnpDevices | Sort-Object FriendlyName) {
             $displayName = $dev.FriendlyName
             if ($displayName.Length -gt 57) { $displayName = $displayName.Substring(0, 54) + "..." }
@@ -132,22 +132,22 @@ if ($allUpgrades.Count -eq 0) {
     }
     
     Write-Host ""
-    Write-Host "Presiona cualquier tecla para salir..." -ForegroundColor $ColorMuted
+    Write-Host "Press any key to exit..." -ForegroundColor $ColorMuted
     try { [void][Console]::ReadKey($true) } catch { Read-Host }
     exit 0
 }
 
-# Listar drivers desactualizados
-Write-Host "Se encontraron $($allUpgrades.Count) actualizaciones de controladores disponibles:" -ForegroundColor $ColorWarning
+# List outdated drivers
+Write-Host "Found $($allUpgrades.Count) available driver updates:" -ForegroundColor $ColorWarning
 Write-Host ""
-Write-Host ("{0,-65} {1,-15} {2}" -f "Nombre del Controlador / Actualizacion", "Tamano Max", "Origen") -ForegroundColor $ColorPrimary
-Write-Host ("{0,-65} {1,-15} {2}" -f "--------------------------------------", "----------", "------") -ForegroundColor $ColorMuted
+Write-Host ("{0,-65} {1,-15} {2}" -f "Driver Name / Update", "Max Size", "Source") -ForegroundColor $ColorPrimary
+Write-Host ("{0,-65} {1,-15} {2}" -f "--------------------", "--------", "------") -ForegroundColor $ColorMuted
 
 foreach ($upg in $allUpgrades) {
     $displayName = $upg.Title
     if ($displayName.Length -gt 62) { $displayName = $displayName.Substring(0, 59) + "..." }
     
-    # Calcular tamano
+    # Calculate size
     $sizeMB = [Math]::Round($upg.MaxDownloadSize / 1MB, 2)
     $sizeText = "$sizeMB MB"
     if ($sizeMB -lt 0.1) {
@@ -161,7 +161,7 @@ foreach ($upg in $allUpgrades) {
 
 Write-Host ""
 Write-Host "=========================================================" -ForegroundColor $ColorPrimary
-Write-Host " INICIANDO FLUJO INTERACTIVO DE ACTUALIZACION DE DRIVERS" -ForegroundColor $ColorPrimary
+Write-Host " STARTING INTERACTIVE DRIVER UPDATE FLOW" -ForegroundColor $ColorPrimary
 Write-Host "=========================================================" -ForegroundColor $ColorPrimary
 Write-Host ""
 
@@ -174,9 +174,9 @@ foreach ($upg in $allUpgrades) {
     if (-not $autoUpdateAll) {
         while ($true) {
             Write-Host ""
-            Write-Host ">>> ¿Deseas actualizar el driver: " -NoNewline
+            Write-Host ">>> Do you want to update the driver: " -NoNewline
             Write-Host $upg.Title -ForegroundColor $ColorPrimary
-            Write-Host "    [S] Si  [N] No  [A] Instalar todos sin preguntar  [C] Cancelar y Salir: " -NoNewline -ForegroundColor $ColorInfo
+            Write-Host "    [Y] Yes  [N] No  [A] Install all without asking  [C] Cancel and Exit: " -NoNewline -ForegroundColor $ColorInfo
             
             $key = $null
             try {
@@ -189,7 +189,7 @@ foreach ($upg in $allUpgrades) {
                 $key = $resp.Trim().ToUpper()
             }
             
-            if ($key -eq "S" -or $key -eq "`r" -or $key -eq "`n") {
+            if ($key -eq "Y" -or $key -eq "`r" -or $key -eq "`n") {
                 $action = "Yes"
                 break
             } elseif ($key -eq "N") {
@@ -202,7 +202,7 @@ foreach ($upg in $allUpgrades) {
                 $action = "Cancel"
                 break
             } else {
-                Write-Host "[!] Opcion no valida. Presiona S, N, A o C." -ForegroundColor $ColorWarning
+                Write-Host "[!] Invalid option. Press Y, N, A, or C." -ForegroundColor $ColorWarning
             }
         }
     } else {
@@ -211,19 +211,19 @@ foreach ($upg in $allUpgrades) {
     
     if ($action -eq "Cancel") {
         Write-Host ""
-        Write-Host "[!] Proceso de actualizacion cancelado. Saliendo..." -ForegroundColor $ColorWarning
+        Write-Host "[!] Update process cancelled. Exiting..." -ForegroundColor $ColorWarning
         break
     }
     
     if ($action -eq "All") {
         $autoUpdateAll = $true
         $action = "Yes"
-        Write-Host "[+] Activado modo de instalacion masiva de drivers..." -ForegroundColor $ColorWarning
+        Write-Host "[+] Bulk driver installation mode activated..." -ForegroundColor $ColorWarning
     }
     
     if ($action -eq "Yes") {
         Write-Host ""
-        Write-Host "[+] Descargando driver: $($upg.Title)... " -NoNewline -ForegroundColor $ColorPrimary
+        Write-Host "[+] Downloading driver: $($upg.Title)... " -NoNewline -ForegroundColor $ColorPrimary
         
         $updateCollection = New-Object -ComObject Microsoft.Update.UpdateColl
         $updateCollection.Add($upg)
@@ -234,46 +234,46 @@ foreach ($upg in $allUpgrades) {
         try {
             $downloadResult = $downloader.Download()
             if ($downloadResult.ResultCode -eq 2) {
-                Write-Host "Completado." -ForegroundColor $ColorSuccess
+                Write-Host "Completed." -ForegroundColor $ColorSuccess
                 
-                Write-Host "[+] Instalando driver: $($upg.Title)... " -NoNewline -ForegroundColor $ColorPrimary
+                Write-Host "[+] Installing driver: $($upg.Title)... " -NoNewline -ForegroundColor $ColorPrimary
                 $installer = $updateSession.CreateUpdateInstaller()
                 $installer.Updates = $updateCollection
                 
                 $installResult = $installer.Install()
                 if ($installResult.ResultCode -eq 2) {
-                    Write-Host "Instalado." -ForegroundColor $ColorSuccess
+                    Write-Host "Installed." -ForegroundColor $ColorSuccess
                     if ($installResult.RebootRequired) {
-                        Write-Host "[!] ADVERTENCIA: Este driver requiere reiniciar el sistema." -ForegroundColor $ColorWarning
+                        Write-Host "[!] WARNING: This driver requires a system restart." -ForegroundColor $ColorWarning
                         $rebootRequired = $true
                     } else {
-                        Write-Host "[SUCCESS] Driver instalado con exito." -ForegroundColor $ColorSuccess
+                        Write-Host "[SUCCESS] Driver installed successfully." -ForegroundColor $ColorSuccess
                     }
                 } else {
-                    Write-Host "Error en instalacion (Codigo: $($installResult.ResultCode))." -ForegroundColor $ColorError
+                    Write-Host "Installation error (Code: $($installResult.ResultCode))." -ForegroundColor $ColorError
                 }
             } else {
-                Write-Host "Error en descarga (Codigo: $($downloadResult.ResultCode))." -ForegroundColor $ColorError
+                Write-Host "Download error (Code: $($downloadResult.ResultCode))." -ForegroundColor $ColorError
             }
         }
         catch {
-            Write-Host "Error inesperado al descargar/instalar: $_" -ForegroundColor $ColorError
+            Write-Host "Unexpected error while downloading/installing: $_" -ForegroundColor $ColorError
         }
     }
     else {
-        Write-Host "[-] Saltando driver." -ForegroundColor $ColorMuted
+        Write-Host "[-] Skipping driver." -ForegroundColor $ColorMuted
     }
 }
 
 Write-Host ""
 Write-Host "=========================================================" -ForegroundColor $ColorPrimary
-Write-Host "               PROCESO COMPLETADO" -ForegroundColor $ColorPrimary
+Write-Host "               PROCESS COMPLETED" -ForegroundColor $ColorPrimary
 Write-Host "=========================================================" -ForegroundColor $ColorPrimary
 Write-Host ""
 
 if ($rebootRequired) {
-    Write-Host "[!] IMPORTANTE: Se han instalado drivers que requieren reiniciar tu laptop." -ForegroundColor $ColorWarning
-    Write-Host "¿Deseas reiniciar la computadora ahora mismo? [S] Si / [N] No: " -NoNewline -ForegroundColor $ColorInfo
+    Write-Host "[!] IMPORTANT: Installed drivers require a system restart." -ForegroundColor $ColorWarning
+    Write-Host "Do you want to restart the computer right now? [Y] Yes / [N] No: " -NoNewline -ForegroundColor $ColorInfo
     
     $key = $null
     try {
@@ -286,18 +286,18 @@ if ($rebootRequired) {
         $key = $resp.Trim().ToUpper()
     }
     
-    if ($key -eq "S" -or $key -eq "`r" -or $key -eq "`n") {
+    if ($key -eq "Y" -or $key -eq "`r" -or $key -eq "`n") {
         Write-Host ""
-        Write-Host "[+] Reiniciando sistema en 5 segundos..." -ForegroundColor $ColorSuccess
+        Write-Host "[+] Restarting system in 5 seconds..." -ForegroundColor $ColorSuccess
         Start-Sleep -Seconds 5
         Restart-Computer -Force
         exit
     } else {
         Write-Host ""
-        Write-Host "[-] Recuerda reiniciar tu laptop manualmente lo antes posible." -ForegroundColor $ColorWarning
+        Write-Host "[-] Remember to restart your laptop manually as soon as possible." -ForegroundColor $ColorWarning
     }
 }
 
 Write-Host ""
-Write-Host "Presiona cualquier tecla para salir..." -ForegroundColor $ColorMuted
+Write-Host "Press any key to exit..." -ForegroundColor $ColorMuted
 try { [void][Console]::ReadKey($true) } catch { Read-Host }

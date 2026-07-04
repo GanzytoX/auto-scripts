@@ -9,7 +9,7 @@ $RECYCLE.BIN/
 .AppleDouble
 .LSOverride
 
-# Editores y IDEs
+# Editors and IDEs
 .vscode/
 .idea/
 *.suo
@@ -17,7 +17,7 @@ $RECYCLE.BIN/
 *.userosscache
 *.sln.docstates
 
-# Archivos de Registro y Temporales
+# Log and Temporary Files
 *.log
 *.tmp
 *.temp

@@ -1,15 +1,15 @@
 <#
 .SYNOPSIS
-    Escanea todas las aplicaciones instaladas en la computadora
-    (Registro, Microsoft Store, Winget, NPM y PNPM) y permite actualizarlas de forma interactiva.
+    Scans all installed applications on the computer
+    (Registry, Microsoft Store, Winget, NPM, and PNPM) and allows interactive updates.
 .DESCRIPTION
-    Este script une informacion de multiples fuentes para proveer un inventario completo de aplicaciones.
-    Luego, busca actualizaciones disponibles y solicita confirmacion para actualizar cada una.
+    This script merges information from multiple sources to provide a complete application inventory.
+    It then checks for available updates and requests confirmation to update each one.
 #>
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# Colores premium para la terminal
+# Premium terminal colors
 $ColorPrimary = "Cyan"
 $ColorSuccess = "Green"
 $ColorWarning = "Yellow"
@@ -20,7 +20,7 @@ $ColorInfo = "White"
 function Show-Header {
     Clear-Host
     Write-Host "=========================================================" -ForegroundColor $ColorPrimary
-    Write-Host "        DETECTOR Y GESTOR DE ACTUALIZACIONES TOTAL" -ForegroundColor $ColorPrimary
+    Write-Host "        TOTAL UPDATE DETECTOR AND MANAGER" -ForegroundColor $ColorPrimary
     Write-Host "=========================================================" -ForegroundColor $ColorPrimary
     Write-Host ""
 }
@@ -31,7 +31,7 @@ function Test-IsAdmin {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-# --- Funciones de Deteccion ---
+# --- Detection Functions ---
 
 function Get-RegistryApps {
     $regPaths = @(
@@ -240,7 +240,7 @@ function Get-PnpmPackages {
     return @()
 }
 
-# --- Funciones de Actualizacion (Upgrades) ---
+# --- Upgrade Functions ---
 
 function Get-WingetUpgrades {
     $originalBuffer = $Host.UI.RawUI.BufferSize
@@ -393,51 +393,51 @@ function Get-NpmUpgrades {
     return @()
 }
 
-# --- Flujo Principal del Script ---
+# --- Main Script Flow ---
 
 Show-Header
 
 $IsAdmin = Test-IsAdmin
 if (-not $IsAdmin) {
-    Write-Host "[INFO] Ejecutando en modo de usuario normal." -ForegroundColor $ColorInfo
-    Write-Host "       El script solicitara privilegios de Administrador de forma individual" -ForegroundColor $ColorInfo
-    Write-Host "       solo cuando se instalen actualizaciones de sistema que lo requieran." -ForegroundColor $ColorInfo
+    Write-Host "[INFO] Running in normal user mode." -ForegroundColor $ColorInfo
+    Write-Host "       The script will request Administrator privileges individually" -ForegroundColor $ColorInfo
+    Write-Host "       only when system updates require them." -ForegroundColor $ColorInfo
     Write-Host ""
 }
 
-Write-Host "[+] Iniciando escaneo de aplicaciones del sistema... Por favor espera." -ForegroundColor $ColorPrimary
+Write-Host "[+] Starting system applications scan... Please wait." -ForegroundColor $ColorPrimary
 Write-Host ""
 
-# Ejecutar detecciones de forma sincrona para evitar problemas de ambito con Start-Job
-Write-Host "[-] Escaneando Registro de Windows (apps de escritorio)... " -NoNewline -ForegroundColor $ColorInfo
+# Run scans synchronously to avoid scope issues with Start-Job
+Write-Host "[-] Scanning Windows Registry (desktop apps)... " -NoNewline -ForegroundColor $ColorInfo
 $registryApps = Get-RegistryApps
-Write-Host "Hecho ($($registryApps.Count) detectadas)" -ForegroundColor $ColorSuccess
+Write-Host "Done ($($registryApps.Count) detected)" -ForegroundColor $ColorSuccess
 
-Write-Host "[-] Escaneando Microsoft Store (Appx)... " -NoNewline -ForegroundColor $ColorInfo
+Write-Host "[-] Scanning Microsoft Store (Appx)... " -NoNewline -ForegroundColor $ColorInfo
 $storeApps = Get-StoreApps
-Write-Host "Hecho ($($storeApps.Count) detectadas)" -ForegroundColor $ColorSuccess
+Write-Host "Done ($($storeApps.Count) detected)" -ForegroundColor $ColorSuccess
 
-Write-Host "[-] Escaneando Windows Package Manager (Winget)... " -NoNewline -ForegroundColor $ColorInfo
+Write-Host "[-] Scanning Windows Package Manager (Winget)... " -NoNewline -ForegroundColor $ColorInfo
 $wingetApps = Get-WingetApps
-Write-Host "Hecho ($($wingetApps.Count) detectadas)" -ForegroundColor $ColorSuccess
+Write-Host "Done ($($wingetApps.Count) detected)" -ForegroundColor $ColorSuccess
 
 $npmApps = @()
 $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
 if ($npmCmd) {
-    Write-Host "[-] Escaneando paquetes globales de NPM... " -NoNewline -ForegroundColor $ColorInfo
+    Write-Host "[-] Scanning NPM global packages... " -NoNewline -ForegroundColor $ColorInfo
     $npmApps = Get-NpmPackages
-    Write-Host "Hecho ($($npmApps.Count) detectadas)" -ForegroundColor $ColorSuccess
+    Write-Host "Done ($($npmApps.Count) detected)" -ForegroundColor $ColorSuccess
 }
 
 $pnpmApps = @()
 $pnpmCmd = Get-Command pnpm -ErrorAction SilentlyContinue
 if ($pnpmCmd) {
-    Write-Host "[-] Escaneando paquetes globales de PNPM... " -NoNewline -ForegroundColor $ColorInfo
+    Write-Host "[-] Scanning PNPM global packages... " -NoNewline -ForegroundColor $ColorInfo
     $pnpmApps = Get-PnpmPackages
-    Write-Host "Hecho ($($pnpmApps.Count) detectadas)" -ForegroundColor $ColorSuccess
+    Write-Host "Done ($($pnpmApps.Count) detected)" -ForegroundColor $ColorSuccess
 }
 
-# Deduplicar y unificar
+# Deduplicate and unify
 $unifiedApps = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
 foreach ($app in $wingetApps) {
@@ -484,23 +484,23 @@ foreach ($app in $pnpmApps) {
 
 Write-Host ""
 Write-Host "=========================================================" -ForegroundColor $ColorPrimary
-Write-Host " RESUMEN: Se detectaron $($unifiedApps.Count) aplicaciones en total." -ForegroundColor $ColorSuccess
+Write-Host " SUMMARY: $($unifiedApps.Count) applications detected in total." -ForegroundColor $ColorSuccess
 Write-Host "=========================================================" -ForegroundColor $ColorPrimary
 Write-Host ""
 
-# Buscar Actualizaciones
-Write-Host "[+] Buscando actualizaciones disponibles..." -ForegroundColor $ColorPrimary
+# Check for Updates
+Write-Host "[+] Checking for available updates..." -ForegroundColor $ColorPrimary
 Write-Host ""
 
-Write-Host "[-] Buscando actualizaciones en Winget y MS Store... " -NoNewline -ForegroundColor $ColorInfo
+Write-Host "[-] Checking for updates in Winget and MS Store... " -NoNewline -ForegroundColor $ColorInfo
 $wingetUpgrades = Get-WingetUpgrades
-Write-Host "Hecho ($($wingetUpgrades.Count) encontradas)" -ForegroundColor $ColorSuccess
+Write-Host "Done ($($wingetUpgrades.Count) found)" -ForegroundColor $ColorSuccess
 
 $npmUpgrades = @()
 if ($npmCmd) {
-    Write-Host "[-] Buscando actualizaciones en paquetes de NPM... " -NoNewline -ForegroundColor $ColorInfo
+    Write-Host "[-] Checking for updates in NPM packages... " -NoNewline -ForegroundColor $ColorInfo
     $npmUpgrades = Get-NpmUpgrades
-    Write-Host "Hecho ($($npmUpgrades.Count) encontradas)" -ForegroundColor $ColorSuccess
+    Write-Host "Done ($($npmUpgrades.Count) found)" -ForegroundColor $ColorSuccess
 }
 
 $allUpgrades = @()
@@ -509,14 +509,14 @@ $allUpgrades += $npmUpgrades
 
 if ($allUpgrades.Count -eq 0) {
     Write-Host ""
-    Write-Host "[OK] ¡Felicidades! Todas las aplicaciones estan al dia. No hay actualizaciones disponibles." -ForegroundColor $ColorSuccess
+    Write-Host "[OK] Congratulations! All applications are up to date. No updates available." -ForegroundColor $ColorSuccess
     Write-Host ""
     
-    $viewAll = Read-Host "¿Deseas ver la lista completa de todas las aplicaciones detectadas? (S/N)"
-    if ($viewAll.Trim().ToUpper() -eq "S") {
+    $viewAll = Read-Host "Do you want to see the full list of detected applications? (Y/N)"
+    if ($viewAll.Trim().ToUpper() -eq "Y") {
         Write-Host ""
-        Write-Host ("{0,-60} {1,-20} {2}" -f "Nombre de la Aplicacion", "Version", "Origen") -ForegroundColor $ColorPrimary
-        Write-Host ("{0,-60} {1,-20} {2}" -f "----------------------", "-------", "------") -ForegroundColor $ColorMuted
+        Write-Host ("{0,-60} {1,-20} {2}" -f "Application Name", "Version", "Source") -ForegroundColor $ColorPrimary
+        Write-Host ("{0,-60} {1,-20} {2}" -f "----------------", "-------", "------") -ForegroundColor $ColorMuted
         foreach ($app in $unifiedApps.Values | Sort-Object Name) {
             $displayName = $app.Name
             if ($displayName.Length -gt 57) { $displayName = $displayName.Substring(0, 54) + "..." }
@@ -525,7 +525,7 @@ if ($allUpgrades.Count -eq 0) {
         }
     }
     Write-Host ""
-    Write-Host "Presiona cualquier tecla para salir..." -ForegroundColor $ColorMuted
+    Write-Host "Press any key to exit..." -ForegroundColor $ColorMuted
     try {
         [void][Console]::ReadKey($true)
     } catch {
@@ -535,10 +535,10 @@ if ($allUpgrades.Count -eq 0) {
 }
 
 Write-Host ""
-Write-Host "Se encontraron $($allUpgrades.Count) actualizaciones disponibles:" -ForegroundColor $ColorWarning
+Write-Host "Found $($allUpgrades.Count) available updates:" -ForegroundColor $ColorWarning
 Write-Host ""
-Write-Host ("{0,-40} {1,-20} {2,-20} {3}" -f "Nombre de la Aplicacion", "Version Actual", "Version Nueva", "Origen") -ForegroundColor $ColorPrimary
-Write-Host ("{0,-40} {1,-20} {2,-20} {3}" -f "----------------------", "--------------", "------------", "------") -ForegroundColor $ColorMuted
+Write-Host ("{0,-40} {1,-20} {2,-20} {3}" -f "Application Name", "Current Version", "New Version", "Source") -ForegroundColor $ColorPrimary
+Write-Host ("{0,-40} {1,-20} {2,-20} {3}" -f "----------------", "---------------", "-----------", "------") -ForegroundColor $ColorMuted
 
 foreach ($upg in $allUpgrades) {
     $displayName = $upg.Name
@@ -549,7 +549,7 @@ foreach ($upg in $allUpgrades) {
 
 Write-Host ""
 Write-Host "=========================================================" -ForegroundColor $ColorPrimary
-Write-Host " INICIANDO FLUJO INTERACTIVO DE ACTUALIZACION" -ForegroundColor $ColorPrimary
+Write-Host "        STARTING INTERACTIVE UPDATE FLOW" -ForegroundColor $ColorPrimary
 Write-Host "=========================================================" -ForegroundColor $ColorPrimary
 Write-Host ""
 
@@ -561,15 +561,15 @@ foreach ($upg in $allUpgrades) {
     if (-not $autoUpdateAll) {
         while ($true) {
             Write-Host ""
-            Write-Host ">>> ¿Deseas actualizar " -NoNewline
+            Write-Host ">>> Do you want to update " -NoNewline
             Write-Host $upg.Name -NoNewline -ForegroundColor $ColorPrimary
-            Write-Host " de " -NoNewline
+            Write-Host " from " -NoNewline
             Write-Host "v$($upg.Version)" -NoNewline -ForegroundColor $ColorMuted
-            Write-Host " a " -NoNewline
+            Write-Host " to " -NoNewline
             Write-Host "v$($upg.Available)" -NoNewline -ForegroundColor $ColorSuccess
             Write-Host " ($($upg.Source))?"
             
-            Write-Host "    [S] Si  [N] No  [A] Actualizar todos sin preguntar  [C] Cancelar y Salir: " -NoNewline -ForegroundColor $ColorInfo
+            Write-Host "    [Y] Yes  [N] No  [A] Update all without asking  [C] Cancel and Exit: " -NoNewline -ForegroundColor $ColorInfo
             
             $key = $null
             try {
@@ -582,7 +582,7 @@ foreach ($upg in $allUpgrades) {
                 $key = $resp.Trim().ToUpper()
             }
             
-            if ($key -eq "S" -or $key -eq "`r" -or $key -eq "`n") {
+            if ($key -eq "Y" -or $key -eq "`r" -or $key -eq "`n") {
                 $action = "Yes"
                 break
             } elseif ($key -eq "N") {
@@ -595,7 +595,7 @@ foreach ($upg in $allUpgrades) {
                 $action = "Cancel"
                 break
             } else {
-                Write-Host "[!] Opcion no valida. Presiona S, N, A o C." -ForegroundColor $ColorWarning
+                Write-Host "[!] Invalid option. Press Y, N, A, or C." -ForegroundColor $ColorWarning
             }
         }
     } else {
@@ -604,43 +604,43 @@ foreach ($upg in $allUpgrades) {
     
     if ($action -eq "Cancel") {
         Write-Host ""
-        Write-Host "[!] Actualizaciones canceladas por el usuario. Saliendo..." -ForegroundColor $ColorWarning
+        Write-Host "[!] Updates cancelled by the user. Exiting..." -ForegroundColor $ColorWarning
         break
     }
     
     if ($action -eq "All") {
         $autoUpdateAll = $true
         $action = "Yes"
-        Write-Host "[+] Activado modo de actualizacion masiva..." -ForegroundColor $ColorWarning
+        Write-Host "[+] Bulk update mode activated..." -ForegroundColor $ColorWarning
     }
     
     if ($action -eq "Yes") {
         Write-Host ""
-        Write-Host "[+] Iniciando actualizacion de $($upg.Name)..." -ForegroundColor $ColorPrimary
+        Write-Host "[+] Starting update for $($upg.Name)..." -ForegroundColor $ColorPrimary
         
         if ($upg.Type -eq "Winget") {
             try {
                 if ($IsAdmin) {
                     & winget upgrade --id $upg.Id --accept-package-agreements --accept-source-agreements --include-unknown
                     if ($LASTEXITCODE -eq 0) {
-                        Write-Host "[SUCCESS] $($upg.Name) se actualizo correctamente." -ForegroundColor $ColorSuccess
+                        Write-Host "[SUCCESS] $($upg.Name) updated successfully." -ForegroundColor $ColorSuccess
                     } else {
-                        Write-Host "[WARN] La actualizacion termino con el codigo de salida: $LASTEXITCODE. Revisa si la aplicacion se actualizo correctamente." -ForegroundColor $ColorWarning
+                        Write-Host "[WARN] Update finished with exit code: $LASTEXITCODE. Please check if the application updated correctly." -ForegroundColor $ColorWarning
                     }
                 } else {
-                    Write-Host "[-] Elevando privilegios para instalar la actualizacion..." -ForegroundColor $ColorMuted
+                    Write-Host "[-] Elevating privileges to install the update..." -ForegroundColor $ColorMuted
                     $psPath = (Get-Process -Id $PID).Path
-                    $cmd = "Write-Host 'Instalando $($upg.Name) como Administrador...'; & winget upgrade --id `"$($upg.Id)`" --accept-package-agreements --accept-source-agreements --include-unknown; `$exit = `$LASTEXITCODE; Start-Sleep -Seconds 3; exit `$exit"
+                    $cmd = "Write-Host 'Installing $($upg.Name) as Administrator...'; & winget upgrade --id `"$($upg.Id)`" --accept-package-agreements --accept-source-agreements --include-unknown; `$exit = `$LASTEXITCODE; Start-Sleep -Seconds 3; exit `$exit"
                     $process = Start-Process $psPath -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`"" -Verb RunAs -Wait -PassThru
                     if ($process.ExitCode -eq 0) {
-                        Write-Host "[SUCCESS] $($upg.Name) se actualizo correctamente." -ForegroundColor $ColorSuccess
+                        Write-Host "[SUCCESS] $($upg.Name) updated successfully." -ForegroundColor $ColorSuccess
                     } else {
-                        Write-Host "[WARN] La actualizacion termino con el codigo de salida: $($process.ExitCode)." -ForegroundColor $ColorWarning
+                        Write-Host "[WARN] Update finished with exit code: $($process.ExitCode)." -ForegroundColor $ColorWarning
                     }
                 }
             }
             catch {
-                Write-Host "[ERROR] Error inesperado al actualizar mediante Winget: $_" -ForegroundColor $ColorError
+                Write-Host "[ERROR] Unexpected error while updating via Winget: $_" -ForegroundColor $ColorError
             }
         }
         elseif ($upg.Type -eq "NPM") {
@@ -648,39 +648,39 @@ foreach ($upg in $allUpgrades) {
                 if ($IsAdmin) {
                     & npm install -g "$($upg.Id)@latest"
                     if ($LASTEXITCODE -eq 0) {
-                        Write-Host "[SUCCESS] Paquete global NPM $($upg.Name) se actualizo correctamente." -ForegroundColor $ColorSuccess
+                        Write-Host "[SUCCESS] Global NPM package $($upg.Name) updated successfully." -ForegroundColor $ColorSuccess
                     } else {
-                        Write-Host "[ERROR] Error al actualizar el paquete NPM $($upg.Name). Codigo: $LASTEXITCODE" -ForegroundColor $ColorError
+                        Write-Host "[ERROR] Error updating NPM package $($upg.Name). Code: $LASTEXITCODE" -ForegroundColor $ColorError
                     }
                 } else {
-                    Write-Host "[-] Elevando privilegios para instalar el paquete NPM..." -ForegroundColor $ColorMuted
+                    Write-Host "[-] Elevating privileges to install the NPM package..." -ForegroundColor $ColorMuted
                     $psPath = (Get-Process -Id $PID).Path
-                    $cmd = "Write-Host 'Instalando paquete NPM $($upg.Name) como Administrador...'; & npm install -g `"$($upg.Id)@latest`"; `$exit = `$LASTEXITCODE; Start-Sleep -Seconds 3; exit `$exit"
+                    $cmd = "Write-Host 'Installing NPM package $($upg.Name) as Administrator...'; & npm install -g `"$($upg.Id)@latest`"; `$exit = `$LASTEXITCODE; Start-Sleep -Seconds 3; exit `$exit"
                     $process = Start-Process $psPath -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`"" -Verb RunAs -Wait -PassThru
                     if ($process.ExitCode -eq 0) {
-                        Write-Host "[SUCCESS] Paquete global NPM $($upg.Name) se actualizo correctamente." -ForegroundColor $ColorSuccess
+                        Write-Host "[SUCCESS] Global NPM package $($upg.Name) updated successfully." -ForegroundColor $ColorSuccess
                     } else {
-                        Write-Host "[ERROR] Error al actualizar el paquete NPM $($upg.Name). Codigo: $($process.ExitCode)" -ForegroundColor $ColorError
+                        Write-Host "[ERROR] Error updating NPM package $($upg.Name). Code: $($process.ExitCode)" -ForegroundColor $ColorError
                     }
                 }
             }
             catch {
-                Write-Host "[ERROR] Error inesperado al actualizar mediante NPM: $_" -ForegroundColor $ColorError
+                Write-Host "[ERROR] Unexpected error while updating via NPM: $_" -ForegroundColor $ColorError
             }
         }
     }
     else {
-        Write-Host "[-] Saltando $($upg.Name)." -ForegroundColor $ColorMuted
+        Write-Host "[-] Skipping $($upg.Name)." -ForegroundColor $ColorMuted
     }
 }
 
 Write-Host ""
 Write-Host "=========================================================" -ForegroundColor $ColorPrimary
-Write-Host "               PROCESO COMPLETADO" -ForegroundColor $ColorPrimary
+Write-Host "                   PROCESS COMPLETED" -ForegroundColor $ColorPrimary
 Write-Host "=========================================================" -ForegroundColor $ColorPrimary
 Write-Host ""
 
-Write-Host "Presiona cualquier tecla para salir..." -ForegroundColor $ColorMuted
+Write-Host "Press any key to exit..." -ForegroundColor $ColorMuted
 try {
     [void][Console]::ReadKey($true)
 } catch {

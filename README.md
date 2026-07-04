@@ -1,42 +1,48 @@
-# Actualizador y Gestor de Scripts
+# Script Updater and Manager
 
-Este repositorio contiene un conjunto de herramientas y scripts en PowerShell diseñados para automatizar la detección y actualización de aplicaciones, paquetes globales y controladores (drivers) en Windows.
+This repository contains a set of tools and scripts designed to automate the detection and update of applications, global packages, and drivers on Windows and macOS.
 
-## Estructura del Proyecto
+## Project Structure
 
-* **`win/`**: Scripts optimizados para sistemas operativos Windows.
-  * **[detect-and-update-apps.ps1](win/detect-and-update-apps.ps1)**: Escanea de forma consolidada el Registro de Windows (HKLM/HKCU, 32 y 64 bits), aplicaciones de la Microsoft Store (Appx/Winget) y entornos de desarrollo globales (NPM/PNPM). Realiza actualizaciones interactivas y seguras usando elevación de administrador *Just-In-Time* individual.
-  * **[detect-and-update-drivers.ps1](win/detect-and-update-drivers.ps1)**: Escanea los dispositivos de hardware de tu equipo y consulta actualizaciones oficiales de controladores mediante la API COM de Windows Update. Permite instalarlos de forma interactiva y detecta si se requiere reiniciar la laptop.
-  * **[get-global-packages.ps1](win/get-global-packages.ps1)**: Script auxiliar para listar paquetes globales instalados en el sistema.
-  * **[get-node-info.ps1](win/get-node-info.ps1)**: Script auxiliar para obtener información del entorno Node.js local.
-  * **[update-npm.ps1](win/update-npm.ps1)**: Script auxiliar para actualizar NPM a su última versión global.
-  * **[update-pnpm.ps1](win/update-pnpm.ps1)**: Script auxiliar para actualizar PNPM a su última versión global.
+- **`win/`**: Scripts optimized for Windows operating systems.
+  - **[detect-and-update-apps.ps1](win/detect-and-update-apps.ps1)**: Performs a consolidated scan of the Windows Registry (HKLM/HKCU, 32-bit and 64-bit), Microsoft Store applications (Appx/Winget), and global development environments (NPM/PNPM). It carries out interactive and secure updates using individual _Just-In-Time_ administrator elevation.
+  - **[detect-and-update-drivers.ps1](win/detect-and-update-drivers.ps1)**: Scans your computer's hardware devices and queries official driver updates through the Windows Update COM API. It allows interactive installation and detects if a system restart is required.
+  - **[get-global-packages.ps1](win/get-global-packages.ps1)**: Helper script to list global packages installed on the system.
+  - **[get-node-info.ps1](win/get-node-info.ps1)**: Helper script to retrieve local Node.js environment information.
+  - **[update-npm.ps1](win/update-npm.ps1)**: Helper script to update NPM to the latest global version.
+  - **[update-pnpm.ps1](win/update-pnpm.ps1)**: Helper script to update PNPM to the latest global version.
 
-* **`mac/`**: Reservado para futuros scripts de automatización en macOS (por ejemplo, usando Homebrew).
+- **`mac/`**: Scripts optimized for macOS automation.
+  - **[brew_update.sh](mac/brew_update.sh)**: Helper script to update Homebrew repositories, upgrade outdated formulae and casks, and clean up temporary files.
+  - **[check_node.sh](mac/check_node.sh)**: Script to check Node.js status, retrieve recent major release lines, and update/install Node.js.
+  - **[update_pnpm.sh](mac/update_pnpm.sh)**: Helper script to check and update PNPM to the latest version.
 
-## Requisitos y Configuración en Windows
+## Requirements and Configuration on Windows
 
-Para ejecutar los scripts de PowerShell, debes permitir la ejecución de scripts locales en tu terminal. Abre PowerShell y ejecuta:
+To execute PowerShell scripts, you must allow the execution of local scripts in your terminal. Open PowerShell and run:
 
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-## Modo de Uso
+## Usage
 
-### Actualización de Aplicaciones (Winget, MS Store, NPM, etc.)
-Ejecuta el script en tu terminal de usuario normal. Si alguna instalación requiere privilegios de administrador, el script la elevará de forma individual en una ventana emergente temporal:
+### Updating Applications (Winget, MS Store, NPM, etc.)
+
+Run the script in your normal user terminal. If an installation requires administrator privileges, the script will elevate individually in a temporary pop-up window:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\win\detect-and-update-apps.ps1
 ```
 
-### Actualización de Controladores (Drivers)
-Para buscar e instalar actualizaciones oficiales de drivers de hardware de tu laptop:
+### Updating Drivers (Windows Only)
+
+To search for and install official hardware driver updates for your computer:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\win\detect-and-update-drivers.ps1
 ```
 
 ---
-Creado con ❤️ para optimizar la productividad y el mantenimiento del sistema.
+
+Created with ❤️ to optimize productivity and system maintenance.
