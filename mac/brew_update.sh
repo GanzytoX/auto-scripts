@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+clear
+
 # Color codes for pretty output
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -17,23 +19,31 @@ if ! command -v brew &> /dev/null; then
 fi
 
 # 1. brew update
-echo "${BLUE}[1/3] Updating Homebrew repositories (brew update)...${NC}"
+echo "${BLUE}[1/4] Updating Homebrew repositories (brew update)...${NC}"
 if brew update; then
     echo "${GREEN}Repositories updated successfully.${NC}\n"
 else
     echo "${RED}Warning: A problem occurred while running 'brew update'.${NC}\n"
 fi
 
-# 2. brew upgrade
-echo "${BLUE}[2/3] Upgrading outdated formulae and casks (brew upgrade)...${NC}"
+# 2. brew outdated
+echo "${BLUE}[2/4] Checking outdated formulae and casks (brew outdated)...${NC}"
+if brew outdated; then
+    echo "${GREEN}Outdated packages listed successfully.${NC}\n"
+else
+    echo "${YELLOW}No outdated packages found, or 'brew outdated' returned a non-zero exit code.${NC}\n"
+fi
+
+# 3. brew upgrade
+echo "${BLUE}[3/4] Upgrading outdated formulae and casks (brew upgrade)...${NC}"
 if brew upgrade; then
     echo "${GREEN}All formulae and casks upgraded successfully.${NC}\n"
 else
     echo "${RED}Warning: A problem occurred while running 'brew upgrade'.${NC}\n"
 fi
 
-# 3. brew cleanup
-echo "${BLUE}[3/3] Cleaning up temporary files and old versions (brew cleanup)...${NC}"
+# 4. brew cleanup
+echo "${BLUE}[4/4] Cleaning up temporary files and old versions (brew cleanup)...${NC}"
 if brew cleanup; then
     echo "${GREEN}Cleanup completed successfully.${NC}\n"
 else
