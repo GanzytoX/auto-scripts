@@ -29,6 +29,7 @@ A collection of clean, interactive automation scripts to manage updates for pack
 - **[brew_list_all.sh](mac/brew_list_all.sh)**: Lists every Homebrew formula, cask, tap, and service currently installed or configured.
 - **[brew_update.sh](mac/brew_update.sh)**: Updates Homebrew formulae/casks and performs cleanup.
 - **[check_node.sh](mac/check_node.sh)**: Checks current Node.js version and recommends updates via detected managers (fnm, nvm, brew, pnpm).
+- **[check_python.sh](mac/check_python.sh)**: Lists installed Python versions, checks the latest patch release for the current minor line, and prompts before updating.
 - **[update_pnpm.sh](mac/update_pnpm.sh)**: Upgrades PNPM using the detected runtime manager.
 
 ---
