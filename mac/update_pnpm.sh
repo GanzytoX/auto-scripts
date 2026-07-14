@@ -11,6 +11,10 @@ NC='\033[0m' # No Color
 
 echo "${BLUE}Checking pnpm status...${NC}"
 
+get_pnpm_version() {
+    pnpm -v 2>/dev/null || true
+}
+
 # Check if pnpm is installed
 if ! command -v pnpm &> /dev/null; then
     echo "${RED}Error: pnpm is not installed on this system.${NC}"
@@ -18,7 +22,7 @@ if ! command -v pnpm &> /dev/null; then
     exit 1
 fi
 
-CURRENT_VERSION=$(pnpm -v)
+CURRENT_VERSION=$(get_pnpm_version)
 # Fetch latest version from registry using curl and extract version
 LATEST_VERSION=$(curl -s https://registry.npmjs.org/pnpm/latest | grep -o '"version"\s*:\s*"[^"]*' | grep -o '[0-9][^"]*')
 
@@ -27,11 +31,15 @@ if [ -z "$LATEST_VERSION" ]; then
     exit 1
 fi
 
-echo "Current pnpm version: ${BLUE}$CURRENT_VERSION${NC}"
+if [ -z "$CURRENT_VERSION" ]; then
+    echo "${YELLOW}Current pnpm version: unavailable (pnpm executable may be corrupted).${NC}"
+else
+    echo "Current pnpm version: ${BLUE}$CURRENT_VERSION${NC}"
+fi
 echo "Latest pnpm version:  ${GREEN}$LATEST_VERSION${NC}"
 
 autoload -Ur is-at-least
-if is-at-least "$LATEST_VERSION" "$CURRENT_VERSION"; then
+if [ -n "$CURRENT_VERSION" ] && is-at-least "$LATEST_VERSION" "$CURRENT_VERSION"; then
     NEEDS_UPDATE=0
 else
     NEEDS_UPDATE=1
@@ -44,7 +52,7 @@ if [ $NEEDS_UPDATE -eq 1 ]; then
     if command -v brew &> /dev/null && brew list pnpm &> /dev/null; then
         echo "${BLUE}Homebrew detected managing pnpm. Updating via Homebrew...${NC}"
         if brew upgrade pnpm; then
-            NEW_VERSION=$(pnpm -v)
+            NEW_VERSION=$(get_pnpm_version)
             if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
                 echo "${GREEN}Success: pnpm has been updated to $NEW_VERSION!${NC}"
                 exit 0
@@ -55,8 +63,8 @@ if [ $NEEDS_UPDATE -eq 1 ]; then
 
     # 2. Try pnpm self-update
     echo "${BLUE}Attempting update via 'pnpm self-update'...${NC}"
-    if pnpm self-update; then
-        NEW_VERSION=$(pnpm -v)
+    if pnpm self-update 2>/dev/null; then
+        NEW_VERSION=$(get_pnpm_version)
         if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
             echo "${GREEN}Success: pnpm has been updated to $NEW_VERSION!${NC}"
             exit 0
@@ -69,7 +77,7 @@ if [ $NEEDS_UPDATE -eq 1 ]; then
     if command -v npm &> /dev/null; then
         echo "${BLUE}Attempting update via 'npm install -g pnpm'...${NC}"
         if npm install -g pnpm; then
-            NEW_VERSION=$(pnpm -v)
+            NEW_VERSION=$(get_pnpm_version)
             if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
                 echo "${GREEN}Success: pnpm has been updated to $NEW_VERSION!${NC}"
                 exit 0
@@ -78,7 +86,7 @@ if [ $NEEDS_UPDATE -eq 1 ]; then
         
         echo "${RED}npm global install did not result in a new version. Trying with sudo...${NC}"
         if sudo npm install -g pnpm; then
-            NEW_VERSION=$(pnpm -v)
+            NEW_VERSION=$(get_pnpm_version)
             if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
                 echo "${GREEN}Success: pnpm has been updated to $NEW_VERSION!${NC}"
                 exit 0
@@ -88,8 +96,8 @@ if [ $NEEDS_UPDATE -eq 1 ]; then
 
     # 4. Fallback to install.sh script
     echo "${BLUE}Attempting update via official installation script...${NC}"
-    if curl -fsSL https://get.pnpm.io/install.sh | sh -; then
-        NEW_VERSION=$(pnpm -v)
+    if curl -fsSL https://get.pnpm.io/install.sh | NODE_OPTIONS="${NODE_OPTIONS:-} --no-warnings" sh -; then
+        NEW_VERSION=$(get_pnpm_version)
         echo "${GREEN}Success: pnpm update script executed! (Current version: $NEW_VERSION). Please restart your terminal or run 'source ~/.zshrc' to apply.${NC}"
         exit 0
     fi
