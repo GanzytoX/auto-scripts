@@ -26,11 +26,12 @@ A collection of clean, interactive automation scripts to manage updates for pack
 
 ### 🍎 macOS (`mac/`)
 
-- **[brew_list_all.sh](mac/brew_list_all.sh)**: Lists every Homebrew formula, cask, tap, and service currently installed or configured.
-- **[brew_update.sh](mac/brew_update.sh)**: Checks and upgrades Homebrew formulae/casks after confirmation; supports dry runs.
-- **[check_node.sh](mac/check_node.sh)**: Checks the active Node.js release line and can safely update it through its actual manager.
-- **[check_python.sh](mac/check_python.sh)**: Lists installed Python versions and can update the active minor line through its actual manager.
-- **[update_pnpm.sh](mac/update_pnpm.sh)**: Checks, updates, or repairs PNPM without mixing installation methods.
+- **[list_homebrew_inventory.sh](mac/list_homebrew_inventory.sh)**: Lists every Homebrew formula, cask, tap, and service currently installed or configured.
+- **[update_homebrew_packages.sh](mac/update_homebrew_packages.sh)**: Checks and upgrades Homebrew formulae/casks after confirmation; supports dry runs.
+- **[manage_node_version.sh](mac/manage_node_version.sh)**: Checks the active Node.js release line and can safely update it through its actual manager.
+- **[manage_python_version.sh](mac/manage_python_version.sh)**: Lists installed Python versions and can update the active minor line through its actual manager.
+- **[list_global_node_packages.sh](mac/list_global_node_packages.sh)**: Lists globally installed npm and pnpm packages with their versions and installation paths.
+- **[manage_pnpm.sh](mac/manage_pnpm.sh)**: Checks, updates, or repairs PNPM without mixing installation methods.
 
 ---
 
@@ -52,23 +53,26 @@ The macOS scripts require zsh and curl. Individual operations may also require H
 
 ```zsh
 # Read-only inventory
-./mac/brew_list_all.sh
+./mac/list_homebrew_inventory.sh
 
 # Preview or confirm Homebrew upgrades
-./mac/brew_update.sh --dry-run
-./mac/brew_update.sh
+./mac/update_homebrew_packages.sh --dry-run
+./mac/update_homebrew_packages.sh
 
 # Check versions without making changes
-./mac/check_node.sh
-./mac/check_python.sh
-./mac/update_pnpm.sh --check
+./mac/manage_node_version.sh
+./mac/manage_python_version.sh
+./mac/manage_pnpm.sh --check
+
+# List global npm and pnpm packages
+./mac/list_global_node_packages.sh
 
 # Offer to update the active Node.js or Python release line
-./mac/check_node.sh --update
-./mac/check_python.sh --update
+./mac/manage_node_version.sh --update
+./mac/manage_python_version.sh --update
 
 # Check and offer to update or repair pnpm
-./mac/update_pnpm.sh
+./mac/manage_pnpm.sh
 ```
 
 Use `--yes` only when an update has already been intentionally requested and non-interactive confirmation is appropriate. Node.js and Python never update in their default check mode. The pnpm updater never falls back to a different package manager, and it does not invoke `sudo`.
