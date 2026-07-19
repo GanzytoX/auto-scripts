@@ -1,53 +1,71 @@
 #!/bin/zsh
 
-clear
+SCRIPT_DIR="${0:A:h}"
+SCRIPT_NAME="${0:t}"
+source "$SCRIPT_DIR/lib/common.zsh" || exit 1
 
-# Color codes for pretty output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+AUTO_YES=0
+DRY_RUN=0
 
-echo "${BLUE}=== Starting Homebrew Update ===${NC}\n"
+usage() {
+    print -r -- "Usage: $SCRIPT_NAME [--yes] [--dry-run]"
+}
 
-# Verify if brew is installed
-if ! command -v brew &> /dev/null; then
-    echo "${RED}Error: Homebrew is not installed on this system.${NC}"
-    echo "To install it, visit: https://brew.sh/"
+while (( $# > 0 )); do
+    case "$1" in
+        -y|--yes) AUTO_YES=1 ;;
+        -n|--dry-run) DRY_RUN=1 ;;
+        -h|--help) usage; exit 0 ;;
+        *) print_error "Unknown option: $1"; usage >&2; exit 2 ;;
+    esac
+    shift
+done
+
+clear_screen
+print_info "=== Homebrew Update ==="
+
+if ! command_exists brew; then
+    print_error "Error: Homebrew is not installed on this system."
+    print -r -- "To install it, visit: https://brew.sh/"
     exit 1
 fi
 
-# 1. brew update
-echo "${BLUE}[1/4] Updating Homebrew repositories (brew update)...${NC}"
-if brew update; then
-    echo "${GREEN}Repositories updated successfully.${NC}\n"
-else
-    echo "${RED}Warning: A problem occurred while running 'brew update'.${NC}\n"
+print_info "Refreshing Homebrew metadata..."
+if ! brew update-if-needed; then
+    print_error "Homebrew metadata could not be updated. No packages were changed."
+    exit 1
 fi
 
-# 2. brew outdated
-echo "${BLUE}[2/4] Checking outdated formulae and casks (brew outdated)...${NC}"
-if brew outdated; then
-    echo "${GREEN}Outdated packages listed successfully.${NC}\n"
-else
-    echo "${YELLOW}No outdated packages found, or 'brew outdated' returned a non-zero exit code.${NC}\n"
+print_info "Checking outdated formulae and casks..."
+if ! OUTDATED="$(brew outdated --verbose)"; then
+    print_error "Homebrew could not determine which packages are outdated."
+    exit 1
 fi
 
-# 3. brew upgrade
-echo "${BLUE}[3/4] Upgrading outdated formulae and casks (brew upgrade)...${NC}"
-if brew upgrade; then
-    echo "${GREEN}All formulae and casks upgraded successfully.${NC}\n"
-else
-    echo "${RED}Warning: A problem occurred while running 'brew upgrade'.${NC}\n"
+if [[ -z "$OUTDATED" ]]; then
+    print_success "Everything managed by Homebrew is already up to date."
+    exit 0
 fi
 
-# 4. brew cleanup
-echo "${BLUE}[4/4] Cleaning up temporary files and old versions (brew cleanup)...${NC}"
-if brew cleanup; then
-    echo "${GREEN}Cleanup completed successfully.${NC}\n"
-else
-    echo "${RED}Warning: A problem occurred while running 'brew cleanup'.${NC}\n"
+print
+print -r -- "$OUTDATED"
+print
+
+if (( DRY_RUN )); then
+    print_info "Dry run: Homebrew reports the following upgrade plan:"
+    brew upgrade --dry-run
+    exit $?
 fi
 
-echo "${GREEN}=== Homebrew Update Completed Successfully ===${NC}"
+if ! confirm "Upgrade all outdated Homebrew packages?"; then
+    print_success "No packages were changed."
+    exit 0
+fi
+
+print_info "Upgrading outdated packages..."
+if ! brew upgrade; then
+    print_error "One or more Homebrew packages could not be upgraded."
+    exit 1
+fi
+
+print_success "Homebrew packages were upgraded successfully."

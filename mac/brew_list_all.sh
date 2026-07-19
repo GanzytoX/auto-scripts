@@ -1,61 +1,84 @@
 #!/bin/zsh
 
-clear
+SCRIPT_DIR="${0:A:h}"
+SCRIPT_NAME="${0:t}"
+source "$SCRIPT_DIR/lib/common.zsh" || exit 1
 
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+if (( $# > 0 )); then
+    if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+        print -r -- "Usage: $SCRIPT_NAME"
+        exit 0
+    fi
+    print_error "Unknown option: $1"
+    print -r -- "Usage: $SCRIPT_NAME" >&2
+    exit 2
+fi
 
-echo "${BLUE}=== Homebrew Inventory ===${NC}"
+clear_screen
+print_info "=== Homebrew Inventory ==="
 
-if ! command -v brew &> /dev/null; then
-    echo "${RED}Error: Homebrew is not installed on this system.${NC}"
-    echo "To install it, visit: https://brew.sh/"
+if ! command_exists brew; then
+    print_error "Error: Homebrew is not installed on this system."
+    print -r -- "To install it, visit: https://brew.sh/"
     exit 1
 fi
 
-echo "${BLUE}Homebrew prefix:${NC} $(brew --prefix)"
-echo "${BLUE}Homebrew version:${NC} $(brew --version | head -n 1)"
+BREW_PREFIX="$(brew --prefix)" || exit 1
+BREW_VERSION_OUTPUT="$(brew --version)" || exit 1
+BREW_VERSION="${BREW_VERSION_OUTPUT%%$'\n'*}"
+print -r -- "${BLUE}Homebrew prefix:${NC} $BREW_PREFIX"
+print -r -- "${BLUE}Homebrew version:${NC} $BREW_VERSION"
 
-echo ""
-echo "${BLUE}[1/4] Installed formulae${NC}"
-FORMULAE_LIST=$(brew list --formula 2>/dev/null)
+print
+print_info "[1/4] Installed formulae"
+if ! FORMULAE_LIST="$(brew list --formula)"; then
+    print_error "Could not list installed formulae."
+    exit 1
+fi
 if [ -n "$FORMULAE_LIST" ]; then
-    echo "$FORMULAE_LIST" | sort
-    echo "${GREEN}Total formulae: $(echo "$FORMULAE_LIST" | wc -l | tr -d ' ')${NC}"
+    print -r -- "$FORMULAE_LIST" | sort
+    print_success "Total formulae: $(print -r -- "$FORMULAE_LIST" | wc -l | tr -d ' ')"
 else
-    echo "${YELLOW}No formulae installed.${NC}"
+    print_warning "No formulae installed."
 fi
 
-echo ""
-echo "${BLUE}[2/4] Installed casks${NC}"
-CASKS_LIST=$(brew list --cask 2>/dev/null)
+print
+print_info "[2/4] Installed casks"
+if ! CASKS_LIST="$(brew list --cask)"; then
+    print_error "Could not list installed casks."
+    exit 1
+fi
 if [ -n "$CASKS_LIST" ]; then
-    echo "$CASKS_LIST" | sort
-    echo "${GREEN}Total casks: $(echo "$CASKS_LIST" | wc -l | tr -d ' ')${NC}"
+    print -r -- "$CASKS_LIST" | sort
+    print_success "Total casks: $(print -r -- "$CASKS_LIST" | wc -l | tr -d ' ')"
 else
-    echo "${YELLOW}No casks installed.${NC}"
+    print_warning "No casks installed."
 fi
 
-echo ""
-echo "${BLUE}[3/4] Tapped repositories${NC}"
-TAPS_LIST=$(brew tap 2>/dev/null)
+print
+print_info "[3/4] Tapped repositories"
+if ! TAPS_LIST="$(brew tap)"; then
+    print_error "Could not list tapped repositories."
+    exit 1
+fi
 if [ -n "$TAPS_LIST" ]; then
-    echo "$TAPS_LIST" | sort
-    echo "${GREEN}Total taps: $(echo "$TAPS_LIST" | wc -l | tr -d ' ')${NC}"
+    print -r -- "$TAPS_LIST" | sort
+    print_success "Total taps: $(print -r -- "$TAPS_LIST" | wc -l | tr -d ' ')"
 else
-    echo "${YELLOW}No additional taps configured.${NC}"
+    print_warning "No additional taps configured."
 fi
 
-echo ""
-echo "${BLUE}[4/4] Homebrew services${NC}"
-if brew services list &> /dev/null; then
-    brew services list
+print
+print_info "[4/4] Homebrew services"
+SERVICES_OUTPUT="$(brew services list 2>&1)"
+SERVICES_STATUS=$?
+if (( SERVICES_STATUS == 0 )); then
+    print -r -- "$SERVICES_OUTPUT"
 else
-    echo "${YELLOW}No Homebrew services information available.${NC}"
+    print_warning "Homebrew services could not be listed:"
+    print -r -- "$SERVICES_OUTPUT" >&2
+    exit 1
 fi
 
-echo ""
-echo "${GREEN}Inventory complete.${NC}"
+print
+print_success "Inventory complete."

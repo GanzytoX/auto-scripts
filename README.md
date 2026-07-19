@@ -27,10 +27,10 @@ A collection of clean, interactive automation scripts to manage updates for pack
 ### 🍎 macOS (`mac/`)
 
 - **[brew_list_all.sh](mac/brew_list_all.sh)**: Lists every Homebrew formula, cask, tap, and service currently installed or configured.
-- **[brew_update.sh](mac/brew_update.sh)**: Updates Homebrew formulae/casks and performs cleanup.
-- **[check_node.sh](mac/check_node.sh)**: Checks current Node.js version and recommends updates via detected managers (fnm, nvm, brew, pnpm).
-- **[check_python.sh](mac/check_python.sh)**: Lists installed Python versions, checks the latest patch release for the current minor line, and prompts before updating.
-- **[update_pnpm.sh](mac/update_pnpm.sh)**: Upgrades PNPM using the detected runtime manager.
+- **[brew_update.sh](mac/brew_update.sh)**: Checks and upgrades Homebrew formulae/casks after confirmation; supports dry runs.
+- **[check_node.sh](mac/check_node.sh)**: Checks the active Node.js release line and can safely update it through its actual manager.
+- **[check_python.sh](mac/check_python.sh)**: Lists installed Python versions and can update the active minor line through its actual manager.
+- **[update_pnpm.sh](mac/update_pnpm.sh)**: Checks, updates, or repairs PNPM without mixing installation methods.
 
 ---
 
@@ -46,13 +46,44 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ## 💻 Usage
 
-### Update Applications (Winget, MS Store, NPM, etc.)
+### macOS
+
+The macOS scripts require zsh and curl. Individual operations may also require Homebrew, Node.js, Python, or pnpm, depending on the script.
+
+```zsh
+# Read-only inventory
+./mac/brew_list_all.sh
+
+# Preview or confirm Homebrew upgrades
+./mac/brew_update.sh --dry-run
+./mac/brew_update.sh
+
+# Check versions without making changes
+./mac/check_node.sh
+./mac/check_python.sh
+./mac/update_pnpm.sh --check
+
+# Offer to update the active Node.js or Python release line
+./mac/check_node.sh --update
+./mac/check_python.sh --update
+
+# Check and offer to update or repair pnpm
+./mac/update_pnpm.sh
+```
+
+Use `--yes` only when an update has already been intentionally requested and non-interactive confirmation is appropriate. Node.js and Python never update in their default check mode. The pnpm updater never falls back to a different package manager, and it does not invoke `sudo`.
+
+Every macOS script supports `--help` for its complete options.
+
+### Windows
+
+#### Update Applications (Winget, MS Store, NPM, etc.)
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\win\detect-and-update-apps.ps1
 ```
 
-### Update System Drivers
+#### Update System Drivers
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\win\detect-and-update-drivers.ps1
