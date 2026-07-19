@@ -7,8 +7,8 @@ A collection of clean, interactive automation scripts to manage updates for pack
 ## 🚀 Features
 
 - **Cross-Platform**: Tailored automation for Windows (PowerShell) and macOS (zsh).
-- **Consolidated Scan**: Searches Windows Registry, Microsoft Store, NPM, and PNPM in one go.
-- **Smart Elevation**: Requests Administrator privileges _Just-In-Time_ only when an install requires them.
+- **Consolidated Scan**: Checks Winget, Microsoft Store, NPM, and PNPM without duplicating installed applications.
+- **Scoped Elevation**: Requests Administrator privileges only when Windows driver installation requires them.
 - **Driver Updates**: Queries the native Windows Update COM API to update outdated hardware drivers.
 
 ---
@@ -17,12 +17,12 @@ A collection of clean, interactive automation scripts to manage updates for pack
 
 ### 🪟 Windows (`win/`)
 
-- **[detect-and-update-apps.ps1](win/detect-and-update-apps.ps1)**: Scans Registry, Microsoft Store (Appx/Winget), and NPM/PNPM to execute interactive, secure application updates.
-- **[detect-and-update-drivers.ps1](win/detect-and-update-drivers.ps1)**: Scans hardware devices and installs driver updates via the Windows Update API.
-- **[get-global-packages.ps1](win/get-global-packages.ps1)**: Lists globally installed NPM and PNPM packages.
-- **[get-node-info.ps1](win/get-node-info.ps1)**: Retrieves detailed environment stats for Node.js.
-- **[update-npm.ps1](win/update-npm.ps1)**: Updates NPM globally to the latest version.
-- **[update-pnpm.ps1](win/update-pnpm.ps1)**: Detects installation type (NPM/standalone/corepack) and upgrades PNPM.
+- **[manage-application-updates.ps1](win/manage-application-updates.ps1)**: Checks Winget, Microsoft Store, and global NPM updates; installs only when requested.
+- **[manage-driver-updates.ps1](win/manage-driver-updates.ps1)**: Checks Windows Update for drivers and optionally installs selected updates with scoped elevation.
+- **[list-global-node-packages.ps1](win/list-global-node-packages.ps1)**: Lists globally installed NPM and PNPM packages.
+- **[manage-node-version.ps1](win/manage-node-version.ps1)**: Reports the active Node.js environment and optionally updates its current major line through the detected manager.
+- **[manage-npm.ps1](win/manage-npm.ps1)**: Checks or updates NPM to the latest stable version.
+- **[manage-pnpm.ps1](win/manage-pnpm.ps1)**: Checks, updates, installs, or repairs PNPM without mixing installation methods.
 
 ### 🍎 macOS (`mac/`)
 
@@ -81,17 +81,40 @@ Every macOS script supports `--help` for its complete options.
 
 ### Windows
 
-#### Update Applications (Winget, MS Store, NPM, etc.)
+#### Check installed applications and available updates
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\win\detect-and-update-apps.ps1
+powershell -NoProfile -File .\win\manage-application-updates.ps1 -Inventory
 ```
 
-#### Update System Drivers
+#### Install application updates
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\win\detect-and-update-drivers.ps1
+powershell -NoProfile -File .\win\manage-application-updates.ps1 -Update
 ```
+
+#### Check or install driver updates
+
+```powershell
+powershell -NoProfile -File .\win\manage-driver-updates.ps1 -ListDevices
+powershell -NoProfile -File .\win\manage-driver-updates.ps1 -Update
+```
+
+#### Inspect Node.js and global packages
+
+```powershell
+powershell -NoProfile -File .\win\manage-node-version.ps1
+powershell -NoProfile -File .\win\list-global-node-packages.ps1
+```
+
+#### Update Node.js package managers
+
+```powershell
+powershell -NoProfile -File .\win\manage-npm.ps1 -Update
+powershell -NoProfile -File .\win\manage-pnpm.ps1 -Update
+```
+
+Windows management scripts are read-only by default. `-Update` explicitly enables changes, while `-Yes` confirms an already-requested operation non-interactively. Driver restarts require the additional `-Restart` switch. PNPM installation requires `-Install` and supports `-InstallMethod Standalone`, `Npm`, or `Corepack`.
 
 ---
 
