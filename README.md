@@ -35,13 +35,22 @@ A collection of clean, interactive automation scripts to manage updates for pack
 
 ---
 
-## 🛠️ Requirements & Setup (Windows)
+## 🛠️ Requirements & Setup
 
-To run PowerShell scripts on Windows, execution policies must allow local scripts. Open PowerShell and run:
+### Windows
+
+- Windows 10/11 with Windows PowerShell 5.1 or PowerShell 7.
+- Winget for application inventory and application updates.
+- Administrator privileges only when installing driver updates.
+- Node.js, npm, pnpm, Corepack, fnm, nvm-windows, or Volta only for the corresponding Node.js management features.
+
+If local PowerShell scripts are blocked, enable the policy for your user account:
 
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
+
+The scripts do not require Administrator PowerShell to perform checks. `manage-driver-updates.ps1` requests elevation only after you explicitly request an installation.
 
 ---
 
@@ -81,40 +90,44 @@ Every macOS script supports `--help` for its complete options.
 
 ### Windows
 
-#### Check installed applications and available updates
+All Windows management scripts are read-only by default. Use `-Update` to request changes, and add `-Yes` only for deliberate non-interactive runs.
+
+#### Read-only checks
 
 ```powershell
 powershell -NoProfile -File .\win\manage-application-updates.ps1 -Inventory
+powershell -NoProfile -File .\win\manage-driver-updates.ps1 -ListDevices
+powershell -NoProfile -File .\win\manage-node-version.ps1
+powershell -NoProfile -File .\win\list-global-node-packages.ps1
+powershell -NoProfile -File .\win\manage-npm.ps1
+powershell -NoProfile -File .\win\manage-pnpm.ps1
 ```
 
-#### Install application updates
+#### Apply updates
 
 ```powershell
 powershell -NoProfile -File .\win\manage-application-updates.ps1 -Update
-```
-
-#### Check or install driver updates
-
-```powershell
-powershell -NoProfile -File .\win\manage-driver-updates.ps1 -ListDevices
 powershell -NoProfile -File .\win\manage-driver-updates.ps1 -Update
-```
-
-#### Inspect Node.js and global packages
-
-```powershell
-powershell -NoProfile -File .\win\manage-node-version.ps1
-powershell -NoProfile -File .\win\list-global-node-packages.ps1
-```
-
-#### Update Node.js package managers
-
-```powershell
+powershell -NoProfile -File .\win\manage-node-version.ps1 -Update
 powershell -NoProfile -File .\win\manage-npm.ps1 -Update
 powershell -NoProfile -File .\win\manage-pnpm.ps1 -Update
 ```
 
-Windows management scripts are read-only by default. `-Update` explicitly enables changes, while `-Yes` confirms an already-requested operation non-interactively. Driver restarts require the additional `-Restart` switch. PNPM installation requires `-Install` and supports `-InstallMethod Standalone`, `Npm`, or `Corepack`.
+#### Restart after driver updates
+
+```powershell
+powershell -NoProfile -File .\win\manage-driver-updates.ps1 -Update -Restart -Yes
+```
+
+#### Install pnpm explicitly
+
+```powershell
+powershell -NoProfile -File .\win\manage-pnpm.ps1 -Install -InstallMethod Standalone
+powershell -NoProfile -File .\win\manage-pnpm.ps1 -Install -InstallMethod Npm
+powershell -NoProfile -File .\win\manage-pnpm.ps1 -Install -InstallMethod Corepack
+```
+
+`-Restart` is always opt-in. PNPM installation requires `-Install` and an explicit `-InstallMethod`; it never guesses a new installation method.
 
 ---
 
