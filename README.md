@@ -32,6 +32,7 @@ A collection of clean, interactive automation scripts to manage updates for pack
 - **[manage_python_version.sh](mac/manage_python_version.sh)**: Lists installed Python versions and can update the active minor line through its actual manager.
 - **[list_global_node_packages.sh](mac/list_global_node_packages.sh)**: Lists globally installed npm and pnpm packages with their versions and installation paths.
 - **[manage_pnpm.sh](mac/manage_pnpm.sh)**: Checks, updates, or repairs PNPM without mixing installation methods.
+- **[manage_npm.sh](mac/manage_npm.sh)**: Checks, updates, or repairs NPM without mixing installation methods.
 
 ---
 
@@ -72,6 +73,7 @@ The macOS scripts require zsh and curl. Individual operations may also require H
 ./mac/manage_node_version.sh
 ./mac/manage_python_version.sh
 ./mac/manage_pnpm.sh --check
+./mac/manage_npm.sh --check
 
 # List global npm and pnpm packages
 ./mac/list_global_node_packages.sh
@@ -80,11 +82,12 @@ The macOS scripts require zsh and curl. Individual operations may also require H
 ./mac/manage_node_version.sh --update
 ./mac/manage_python_version.sh --update
 
-# Check and offer to update or repair pnpm
+# Check and offer to update or repair pnpm or npm
 ./mac/manage_pnpm.sh
+./mac/manage_npm.sh
 ```
 
-Use `--yes` only when an update has already been intentionally requested and non-interactive confirmation is appropriate. Node.js and Python never update in their default check mode. The pnpm updater never falls back to a different package manager, and it does not invoke `sudo`.
+Use `--yes` only when an update has already been intentionally requested and non-interactive confirmation is appropriate. Node.js and Python never update in their default check mode. The pnpm and npm updaters never fall back to a different package manager, and do not invoke `sudo`.
 
 Every macOS script supports `--help` for its complete options.
 
