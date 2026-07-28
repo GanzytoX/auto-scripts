@@ -87,7 +87,23 @@ if ! RELEASES_JSON="$(fetch_url 'https://nodejs.org/dist/index.json')"; then
     exit 1
 fi
 
-if ! RELEASE_INFO="$(print -rn -- "$RELEASES_JSON" | CURRENT_MAJOR="$CURRENT_MAJOR" node -e '
+# Prefer jq for parsing: relying on the same Node.js binary being evaluated to parse
+# its own upstream release feed is a needless circular dependency, and jq is the more
+# conventional tool for this. Fall back to node only if jq is unavailable.
+if command_exists jq; then
+    RELEASE_INFO="$(print -rn -- "$RELEASES_JSON" | jq -r --arg major "$CURRENT_MAJOR" '
+        if (type != "array") or (length == 0) then empty else
+        (.[0]) as $current |
+        (map(select(.lts != false)) | first) as $lts |
+        (map(select(.version | startswith("v" + $major + "."))) | first) as $sameMajor |
+        if ($current == null or $lts == null or $sameMajor == null) then empty else
+        [$current.version, $lts.version, $lts.lts, $sameMajor.version] | @tsv
+        end end
+    ')"
+    PARSE_STATUS=$?
+else
+    print_warning "jq not found; falling back to Node.js to parse release data."
+    RELEASE_INFO="$(print -rn -- "$RELEASES_JSON" | CURRENT_MAJOR="$CURRENT_MAJOR" node -e '
 const fs = require("fs");
 const releases = JSON.parse(fs.readFileSync(0, "utf8"));
 if (!Array.isArray(releases) || releases.length === 0) process.exit(2);
@@ -96,7 +112,11 @@ const lts = releases.find((release) => release.lts);
 const sameMajor = releases.find((release) => release.version.startsWith(`v${process.env.CURRENT_MAJOR}.`));
 if (!current || !lts || !sameMajor) process.exit(3);
 process.stdout.write([current.version, lts.version, lts.lts, sameMajor.version].join("\t"));
-')"; then
+')"
+    PARSE_STATUS=$?
+fi
+
+if (( PARSE_STATUS != 0 )) || [[ -z "$RELEASE_INFO" ]]; then
     print_error "nodejs.org returned release data in an unexpected format."
     exit 1
 fi
