@@ -33,6 +33,7 @@ A collection of clean, interactive automation scripts to manage updates for pack
 - **[list_global_node_packages.sh](mac/list_global_node_packages.sh)**: Lists globally installed npm and pnpm packages with their versions and installation paths.
 - **[manage_pnpm.sh](mac/manage_pnpm.sh)**: Checks, updates, or repairs PNPM without mixing installation methods.
 - **[manage_npm.sh](mac/manage_npm.sh)**: Checks, updates, or repairs NPM without mixing installation methods.
+- **[get_system_info.sh](mac/get_system_info.sh)**: Reports comprehensive device hardware, OS, battery, graphics, disk, network, and runtime details.
 
 ---
 
@@ -62,8 +63,11 @@ The scripts do not require Administrator PowerShell to perform checks. `manage-d
 The macOS scripts require zsh and curl. Individual operations may also require Homebrew, Node.js, Python, or pnpm, depending on the script.
 
 ```zsh
-# Read-only inventory
+# Read-only inventory and system hardware report
 ./mac/list_homebrew_inventory.sh
+./mac/get_system_info.sh
+./mac/get_system_info.sh --brief
+./mac/get_system_info.sh --json
 
 # Preview or confirm Homebrew upgrades
 ./mac/update_homebrew_packages.sh --dry-run
