@@ -8,6 +8,7 @@
 
 [CmdletBinding()]
 param(
+    [switch]$Check,
     [switch]$Update,
     [switch]$Yes
 )
@@ -15,8 +16,12 @@ param(
 . "$PSScriptRoot\lib\common.ps1"
 Initialize-ScriptEnvironment -Clear
 
-if ($Yes -and -not $Update) {
-    Write-ErrorMessage "-Yes can only be used together with -Update."
+if ($Check -and $Update) {
+    Write-ErrorMessage "-Check cannot be combined with -Update."
+    exit 2
+}
+if ($Yes -and $Check) {
+    Write-ErrorMessage "-Yes cannot be combined with -Check."
     exit 2
 }
 
@@ -150,9 +155,8 @@ if ($environment.Version -ge $targetVersion) {
     exit 0
 }
 
-Write-WarningMessage "A newer patch is available: $($environment.Version) -> $targetVersion"
-if (-not $Update) {
-    Write-Host "Run this script with -Update to install it through $($manager.Name)." -ForegroundColor $script:ColorMuted
+if ($Check) {
+    Write-WarningMessage "A newer patch is available: $($environment.Version) -> $targetVersion"
     exit 0
 }
 

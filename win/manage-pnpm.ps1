@@ -8,6 +8,7 @@
 
 [CmdletBinding()]
 param(
+    [switch]$Check,
     [switch]$Update,
     [switch]$Install,
     [switch]$Yes,
@@ -18,12 +19,16 @@ param(
 . "$PSScriptRoot\lib\common.ps1"
 Initialize-ScriptEnvironment -Clear
 
-if ($Update -and $Install) {
-    Write-ErrorMessage "Choose either -Update or -Install, not both."
+if ($Check -and ($Update -or $Install)) {
+    Write-ErrorMessage "-Check cannot be combined with -Update or -Install."
     exit 2
 }
-if ($Yes -and -not ($Update -or $Install)) {
-    Write-ErrorMessage "-Yes requires -Update or -Install."
+if ($Yes -and $Check) {
+    Write-ErrorMessage "-Yes cannot be combined with -Check."
+    exit 2
+}
+if ($Update -and $Install) {
+    Write-ErrorMessage "Choose either -Update or -Install, not both."
     exit 2
 }
 
@@ -155,18 +160,17 @@ if (-not $pnpmAvailable) {
     $method = $InstallMethod
 }
 elseif (-not $pnpmWorks) {
-    if (-not $Update) {
-        Write-WarningMessage "pnpm is installed but not working. Use -Update to repair it with the detected method."
-        exit 1
+    if ($Check) {
+        Write-WarningMessage "pnpm is installed but not working. Latest available version: $latestVersion"
+        exit 0
     }
 }
 elseif ($currentVersion -ge $latestVersion) {
     Write-Success "pnpm is already up to date."
     exit 0
 }
-elseif (-not $Update) {
+elseif ($Check) {
     Write-WarningMessage "A newer pnpm version is available: $currentVersion -> $latestVersion"
-    Write-Host "Run this script with -Update to install it." -ForegroundColor $script:ColorMuted
     exit 0
 }
 
@@ -176,7 +180,7 @@ if ($method -eq 'Unknown' -or $method -eq 'None') {
 }
 
 $action = if ($Install) { 'Install' } elseif ($pnpmWorks) { 'Update' } else { 'Repair' }
-if (-not (Confirm-Action -Prompt "$action pnpm $latestVersion using $method?" -Yes:$Yes)) {
+if (-not (Confirm-Action -Prompt "$action pnpm $latestVersion using ${method}?" -Yes:$Yes)) {
     Write-Success "No packages were changed."
     exit 0
 }
