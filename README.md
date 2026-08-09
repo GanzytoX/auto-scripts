@@ -1,141 +1,183 @@
-# Auto Scripts
+<div align="center">
 
-A collection of clean, interactive automation scripts to manage updates for packages, applications, and drivers across Windows and macOS.
+<pre style="display: inline-block; text-align: left;">
+    ___         __          _____           _       __      
+   /   |  __  _/ /_____    / ___/__________(_)___  / /______
+  / /| | / / / / __/ __ \  \__ \/ ___/ ___/ / __ \/ __/ ___/
+ / ___ |/ /_/ / /_/ /_/ / ___/ / /__/ /  / / /_/ / /_(__  ) 
+/_/  |_|\__,_/\__/\____/ /____/\___/_/  /_/ .___/\__/____/  
+                                         /_/                
+</pre>
 
----
+[![macOS](https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](https://apple.com)
+[![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://microsoft.com)
 
-## 🚀 Features
-
-- **Cross-Platform**: Tailored automation for Windows (PowerShell) and macOS (zsh).
-- **Consolidated Scan**: Checks Winget, Microsoft Store, NPM, and PNPM without duplicating installed applications.
-- **Scoped Elevation**: Requests Administrator privileges only when Windows driver installation requires them.
-- **Driver Updates**: Queries the native Windows Update COM API to update outdated hardware drivers.
+</div>
 
 ---
 
 ## 📂 Project Structure
 
-### 🪟 Windows (`win/`)
+### 🍎 macOS Tools (`mac/`)
 
-- **[manage-application-updates.ps1](win/manage-application-updates.ps1)**: Checks Winget, Microsoft Store, and global NPM updates; installs only when requested.
-- **[manage-driver-updates.ps1](win/manage-driver-updates.ps1)**: Checks Windows Update for drivers and optionally installs selected updates with scoped elevation.
-- **[list-global-node-packages.ps1](win/list-global-node-packages.ps1)**: Lists globally installed NPM and PNPM packages.
-- **[manage-node-version.ps1](win/manage-node-version.ps1)**: Reports the active Node.js environment and optionally updates its current major line through the detected manager.
-- **[manage-npm.ps1](win/manage-npm.ps1)**: Checks or updates NPM to the latest stable version.
-- **[manage-pnpm.ps1](win/manage-pnpm.ps1)**: Checks, updates, installs, or repairs PNPM without mixing installation methods.
+| Script                                                                                                 | Description                                                                         |
+| :----------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------- |
+| 📋 [get_system_info.sh](file:///Users/gon/dev/auto-scripts/mac/get_system_info.sh)                     | Hardware, OS, battery, GPU, disk, network, and runtime audit (`--brief`, `--json`). |
+| 🍺 [list_homebrew_inventory.sh](file:///Users/gon/dev/auto-scripts/mac/list_homebrew_inventory.sh)     | Lists all Homebrew formulae, casks, taps, and services configured.                  |
+| 🔄 [update_homebrew_packages.sh](file:///Users/gon/dev/auto-scripts/mac/update_homebrew_packages.sh)   | Checks and upgrades Homebrew packages with dry-run support.                         |
+| 🟢 [manage_node_version.sh](file:///Users/gon/dev/auto-scripts/mac/manage_node_version.sh)             | Inspects and safely updates Node.js via active version manager.                     |
+| 🐍 [manage_python_version.sh](file:///Users/gon/dev/auto-scripts/mac/manage_python_version.sh)         | Inspects Python installations and updates patch/minor releases.                     |
+| 📦 [list_global_node_packages.sh](file:///Users/gon/dev/auto-scripts/mac/list_global_node_packages.sh) | Audits global NPM and PNPM packages with versions and file paths.                   |
+| ⚡ [manage_pnpm.sh](file:///Users/gon/dev/auto-scripts/mac/manage_pnpm.sh)                             | Checks, updates, installs, or repairs PNPM safely.                                  |
+| 🧹 [manage_npm.sh](file:///Users/gon/dev/auto-scripts/mac/manage_npm.sh)                               | Checks, updates, or repairs NPM isolated to its active release line.                |
 
-### 🍎 macOS (`mac/`)
+### 🪟 Windows Tools (`win/`)
 
-- **[list_homebrew_inventory.sh](mac/list_homebrew_inventory.sh)**: Lists every Homebrew formula, cask, tap, and service currently installed or configured.
-- **[update_homebrew_packages.sh](mac/update_homebrew_packages.sh)**: Checks and upgrades Homebrew formulae/casks after confirmation; supports dry runs.
-- **[manage_node_version.sh](mac/manage_node_version.sh)**: Checks the active Node.js release line and can safely update it through its actual manager.
-- **[manage_python_version.sh](mac/manage_python_version.sh)**: Lists installed Python versions and can update the active minor line through its actual manager.
-- **[list_global_node_packages.sh](mac/list_global_node_packages.sh)**: Lists globally installed npm and pnpm packages with their versions and installation paths.
-- **[manage_pnpm.sh](mac/manage_pnpm.sh)**: Checks, updates, or repairs PNPM without mixing installation methods.
-- **[manage_npm.sh](mac/manage_npm.sh)**: Checks, updates, or repairs NPM without mixing installation methods.
-- **[get_system_info.sh](mac/get_system_info.sh)**: Reports comprehensive device hardware, OS, battery, graphics, disk, network, and runtime details.
+| Script                                                                                                     | Description                                                      |
+| :--------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------- |
+| 🛒 [manage-application-updates.ps1](file:///Users/gon/dev/auto-scripts/win/manage-application-updates.ps1) | Consolidated Winget, Microsoft Store, and NPM app update check.  |
+| 🚗 [manage-driver-updates.ps1](file:///Users/gon/dev/auto-scripts/win/manage-driver-updates.ps1)           | Queries Windows Update COM API for outdated hardware drivers.    |
+| 🟢 [manage-node-version.ps1](file:///Users/gon/dev/auto-scripts/win/manage-node-version.ps1)               | Reports active Node.js release and updates via detected manager. |
+| 📦 [list-global-node-packages.ps1](file:///Users/gon/dev/auto-scripts/win/list-global-node-packages.ps1)   | Lists globally installed NPM and PNPM packages cleanly.          |
+| ⚡ [manage-pnpm.ps1](file:///Users/gon/dev/auto-scripts/win/manage-pnpm.ps1)                               | Controls PNPM installation and updates without mixed methods.    |
+| 🧹 [manage-npm.ps1](file:///Users/gon/dev/auto-scripts/win/manage-npm.ps1)                                 | Inspects or updates NPM safely without elevation side-effects.   |
 
 ---
 
-## 🛠️ Requirements & Setup
+## 🛠️ Setup & Requirements
 
-### Windows
+### 🍎 macOS Setup
 
-- Windows 10/11 with Windows PowerShell 5.1 or PowerShell 7.
-- Winget for application inventory and application updates.
-- Administrator privileges only when installing driver updates.
-- Node.js, npm, pnpm, Corepack, fnm, nvm-windows, or Volta only for the corresponding Node.js management features.
+- **Shell**: Zsh (default on macOS).
+- **Dependencies**: `curl`. Individual utilities utilize `brew`, `node`, `python3`, or `pnpm` if available on PATH.
 
-If local PowerShell scripts are blocked, enable the policy for your user account:
+```zsh
+# Make scripts executable
+chmod +x mac/*.sh
+```
+
+### 🪟 Windows Setup
+
+- **PowerShell**: Windows PowerShell 5.1 or PowerShell 7+.
+- **Package Managers**: `winget` for Windows application management.
+- **Privileges**: Normal user privileges for audits. Elevation prompt occurs only upon explicit driver update installation.
+
+If script execution is blocked on Windows, enable local script execution for the current user:
 
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-The scripts do not require Administrator PowerShell to perform checks. `manage-driver-updates.ps1` requests elevation only after you explicitly request an installation.
-
 ---
 
-## 💻 Usage
+## 🚀 Usage Guide
 
-### macOS
+> 📌 **Note**: All scripts default to **Check / Audit mode**. No changes will be made to your system unless you explicitly specify update flags (`--update` / `-Update`).
 
-The macOS scripts require zsh and curl. Individual operations may also require Homebrew, Node.js, Python, or pnpm, depending on the script.
+### 🍎 macOS Terminal Commands
+
+<details open>
+<summary><b>System Audit & Inventory</b></summary>
 
 ```zsh
-# Read-only inventory and system hardware report
-./mac/list_homebrew_inventory.sh
+# Complete hardware & OS diagnostic report
 ./mac/get_system_info.sh
+
+# Concise summary or JSON export for automation
 ./mac/get_system_info.sh --brief
 ./mac/get_system_info.sh --json
 
-# Preview or confirm Homebrew upgrades
+# Complete Homebrew formula, cask & service inventory
+./mac/list_homebrew_inventory.sh
+
+# List all global npm and pnpm packages
+./mac/list_global_node_packages.sh
+```
+
+</details>
+
+<details open>
+<summary><b>Package & Runtime Updates</b></summary>
+
+```zsh
+# Dry-run Homebrew update check
 ./mac/update_homebrew_packages.sh --dry-run
+
+# Interactive Homebrew upgrade
 ./mac/update_homebrew_packages.sh
 
-# Check versions without making changes
+# Check Node.js and Python status (Read-only)
 ./mac/manage_node_version.sh
 ./mac/manage_python_version.sh
-./mac/manage_pnpm.sh --check
-./mac/manage_npm.sh --check
 
-# List global npm and pnpm packages
-./mac/list_global_node_packages.sh
-
-# Offer to update the active Node.js or Python release line
+# Perform Node.js or Python update via detected manager
 ./mac/manage_node_version.sh --update
 ./mac/manage_python_version.sh --update
 
-# Check and offer to update or repair pnpm or npm
+# Check/Repair NPM or PNPM
+./mac/manage_pnpm.sh --check
+./mac/manage_npm.sh --check
 ./mac/manage_pnpm.sh
 ./mac/manage_npm.sh
 ```
 
-Use `--yes` only when an update has already been intentionally requested and non-interactive confirmation is appropriate. Node.js and Python never update in their default check mode. The pnpm and npm updaters never fall back to a different package manager, and do not invoke `sudo`.
+</details>
 
-Every macOS script supports `--help` for its complete options.
+---
 
-### Windows
+### 🪟 Windows PowerShell Commands
 
-All Windows management scripts are read-only by default. Use `-Update` to request changes, and add `-Yes` only for deliberate non-interactive runs.
-
-#### Read-only checks
+<details open>
+<summary><b>Read-Only System & Package Audits</b></summary>
 
 ```powershell
+# Consolidated Winget & Microsoft Store inventory check
 powershell -NoProfile -File .\win\manage-application-updates.ps1 -Inventory
+
+# Query available driver updates via Windows Update COM API
 powershell -NoProfile -File .\win\manage-driver-updates.ps1 -ListDevices
+
+# Node.js, NPM, and PNPM status audit
 powershell -NoProfile -File .\win\manage-node-version.ps1
 powershell -NoProfile -File .\win\list-global-node-packages.ps1
 powershell -NoProfile -File .\win\manage-npm.ps1
 powershell -NoProfile -File .\win\manage-pnpm.ps1
 ```
 
-#### Apply updates
+</details>
+
+<details open>
+<summary><b>Application & Driver Updates</b></summary>
 
 ```powershell
+# Update installed applications
 powershell -NoProfile -File .\win\manage-application-updates.ps1 -Update
+
+# Interactive Windows driver updates (prompts for UAC elevation)
 powershell -NoProfile -File .\win\manage-driver-updates.ps1 -Update
+
+# Update Node.js, NPM, or PNPM
 powershell -NoProfile -File .\win\manage-node-version.ps1 -Update
 powershell -NoProfile -File .\win\manage-npm.ps1 -Update
 powershell -NoProfile -File .\win\manage-pnpm.ps1 -Update
-```
 
-#### Restart after driver updates
-
-```powershell
+# Driver update with opt-in automatic system reboot
 powershell -NoProfile -File .\win\manage-driver-updates.ps1 -Update -Restart -Yes
-```
 
-#### Install pnpm explicitly
-
-```powershell
+# Explicit PNPM installation by standalone installer, npm, or corepack
 powershell -NoProfile -File .\win\manage-pnpm.ps1 -Install -InstallMethod Standalone
 powershell -NoProfile -File .\win\manage-pnpm.ps1 -Install -InstallMethod Npm
 powershell -NoProfile -File .\win\manage-pnpm.ps1 -Install -InstallMethod Corepack
 ```
 
-`-Restart` is always opt-in. PNPM installation requires `-Install` and an explicit `-InstallMethod`; it never guesses a new installation method.
+</details>
+
+> 💡 **Tip**: Use `-Yes` or `--yes` only in automated environments where non-interactive execution is intended.
 
 ---
 
-_Made with ❤️ by **GonzaDev** to optimize system productivity and maintenance._
+<div align="center">
+
+Made with ❤️ by **[GonzaDev](https://github.com/GanzytoX)**
+
+</div>
