@@ -200,6 +200,17 @@ case "$MANAGER" in
     brew)
         print_info "Upgrading $BREW_FORMULA with Homebrew..."
         brew upgrade "$BREW_FORMULA" || exit 1
+
+        NEW_BREW_VER="$(brew list --versions "$BREW_FORMULA" 2>/dev/null | awk '{print $NF}')"
+        if [[ "$NEW_BREW_VER" == "$CURRENT_VERSION" ]]; then
+            print_warning "Homebrew formula '$BREW_FORMULA' is still at version $CURRENT_VERSION."
+            print_info "The patch $LATEST_SAME_MINOR published on python.org is not yet available in Homebrew's repositories."
+            exit 0
+        elif version_is_newer "$LATEST_SAME_MINOR" "$NEW_BREW_VER"; then
+            print_success "Python $BREW_FORMULA was upgraded to version $NEW_BREW_VER with Homebrew."
+            print_warning "Note: python.org lists $LATEST_SAME_MINOR, but Homebrew currently only has $NEW_BREW_VER available."
+            exit 0
+        fi
     ;;
     "python.org installer")
         print_error "Python.org framework installations require the signed macOS installer and cannot be patched safely by this script."
@@ -213,3 +224,4 @@ case "$MANAGER" in
 esac
 
 print_success "Python $LATEST_SAME_MINOR was installed successfully."
+
