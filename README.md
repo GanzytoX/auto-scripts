@@ -24,6 +24,7 @@
 | :----------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------- |
 | 📋 [get_system_info.sh](file:///Users/gon/dev/auto-scripts/mac/get_system_info.sh)                     | Hardware, OS, battery, GPU, disk, network, and runtime audit (`--brief`, `--json`). |
 | 🍺 [list_homebrew_inventory.sh](file:///Users/gon/dev/auto-scripts/mac/list_homebrew_inventory.sh)     | Lists all Homebrew formulae, casks, taps, and services configured.                  |
+| 🧾 [list_installed_software.sh](file:///Users/gon/dev/auto-scripts/mac/list_installed_software.sh)     | Audits macOS apps, Homebrew packages, PATH entries, executables, and package receipts. |
 | 🔄 [update_homebrew_packages.sh](file:///Users/gon/dev/auto-scripts/mac/update_homebrew_packages.sh)   | Checks and upgrades Homebrew packages with dry-run support.                         |
 | 🟢 [manage_node_version.sh](file:///Users/gon/dev/auto-scripts/mac/manage_node_version.sh)             | Inspects and safely updates Node.js via active version manager.                     |
 | 🐍 [manage_python_version.sh](file:///Users/gon/dev/auto-scripts/mac/manage_python_version.sh)         | Inspects Python installations and updates patch/minor releases.                     |
@@ -89,6 +90,9 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 # Complete Homebrew formula, cask & service inventory
 ./mac/list_homebrew_inventory.sh
+
+# List installed macOS applications and Homebrew software
+./mac/list_installed_software.sh
 
 # List all global npm and pnpm packages
 ./mac/list_global_node_packages.sh
