@@ -9,15 +9,46 @@ print_warning() {
     print -r -- "${YELLOW}$*${NC}"
 }
 
-if (( $# > 0 )); then
-    if [[ "$1" == "-h" || "$1" == "--help" ]]; then
-        print -r -- "Usage: $SCRIPT_NAME"
+NO_PAUSE=0
+
+usage() {
+    print -r -- "Usage: $SCRIPT_NAME [--no-pause]"
+    print -r -- "  --no-pause  Run through all sections without prompting between steps."
+    print -r -- "  -h, --help  Show this help message."
+}
+
+while (( $# > 0 )); do
+    case "$1" in
+        --no-pause)
+            NO_PAUSE=1
+        ;;
+        -h|--help)
+            usage
+            exit 0
+        ;;
+        *)
+            print_error "Unknown option: $1"
+            usage >&2
+            exit 2
+        ;;
+    esac
+    shift
+done
+
+prompt_continue() {
+    if [[ ! -t 0 || ! -t 1 || "${AUTO_YES:-0}" == "1" || "${NO_PAUSE:-0}" == "1" ]]; then
+        return 0
+    fi
+    print
+    printf '%s' "${BLUE}Press [Enter] to continue to next section (or 'q' to quit)...${NC} "
+    local response
+    read -r response
+    if [[ "$response" == [qQ] ]]; then
+        print
+        print_info "Inventory stopped by user."
         exit 0
     fi
-    print_error "Unknown option: $1"
-    print -r -- "Usage: $SCRIPT_NAME" >&2
-    exit 2
-fi
+}
 
 clear_screen
 print_info "=== Installed Software Inventory ==="
@@ -72,6 +103,8 @@ else
     print_warning "No macOS applications were found."
 fi
 
+prompt_continue
+
 print
 print_info "[2/9] Homebrew formulae"
 if command_exists brew; then
@@ -89,6 +122,8 @@ else
     print_warning "Homebrew is not installed or is not available in PATH."
 fi
 
+prompt_continue
+
 print
 print_info "[3/9] Homebrew casks"
 if command_exists brew; then
@@ -105,6 +140,8 @@ if command_exists brew; then
 else
     print_warning "Homebrew is not installed or is not available in PATH."
 fi
+
+prompt_continue
 
 print
 print_info "[4/9] PATH directories"
@@ -125,6 +162,8 @@ for path_directory in "${PATH_DIRECTORIES[@]}"; do
 done
 print_success "Total PATH directories: ${#PATH_DIRECTORIES[@]}"
 
+prompt_continue
+
 print
 print_info "[5/9] Executables available in PATH"
 rehash
@@ -138,6 +177,8 @@ else
     print_warning "No executable commands were found in PATH."
 fi
 
+prompt_continue
+
 print
 print_info "[6/9] macOS package receipts"
 if ! PACKAGE_RECEIPTS="$(pkgutil --pkgs 2>/dev/null | sort)"; then
@@ -150,6 +191,8 @@ if [[ -n "$PACKAGE_RECEIPTS" ]]; then
 else
     print_warning "No macOS package receipts were found."
 fi
+
+prompt_continue
 
 print
 print_info "[7/9] Selected command versions"
@@ -174,6 +217,8 @@ if [[ -x /usr/bin/git ]]; then
     printf '  %-12s %-36s %s\n' "system git" "$system_git_version" "/usr/bin/git"
 fi
 
+prompt_continue
+
 print
 print_info "[8/9] Global Node.js packages"
 for package_manager in npm pnpm; do
@@ -186,6 +231,8 @@ for package_manager in npm pnpm; do
         print_warning "$package_manager is not installed or is not available in PATH."
     fi
 done
+
+prompt_continue
 
 print
 print_info "[9/9] Python packages"

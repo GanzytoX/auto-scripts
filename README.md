@@ -91,8 +91,11 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 # Complete Homebrew formula, cask & service inventory
 ./mac/list_homebrew_inventory.sh
 
-# List installed macOS applications and Homebrew software
+# List installed macOS applications and Homebrew software (interactive pause per section)
 ./mac/list_installed_software.sh
+
+# Run continuously without prompting between sections
+./mac/list_installed_software.sh --no-pause
 
 # List all global npm and pnpm packages
 ./mac/list_global_node_packages.sh
