@@ -29,6 +29,7 @@
 | 🟢 [manage_node_version.sh](file:///Users/gon/dev/auto-scripts/mac/manage_node_version.sh)             | Inspects and safely updates Node.js via active version manager.                     |
 | 🐍 [manage_python_version.sh](file:///Users/gon/dev/auto-scripts/mac/manage_python_version.sh)         | Inspects Python installations and updates patch/minor releases.                     |
 | 📦 [list_global_node_packages.sh](file:///Users/gon/dev/auto-scripts/mac/list_global_node_packages.sh) | Audits global NPM and PNPM packages with versions and file paths.                   |
+| 🧹 [clean_residual_app_data.sh](file:///Users/gon/dev/auto-scripts/mac/clean_residual_app_data.sh)     | Detects and cleans orphaned caches, preferences, LaunchAgents, and package receipts. |
 | ⚡ [manage_pnpm.sh](file:///Users/gon/dev/auto-scripts/mac/manage_pnpm.sh)                             | Checks, updates, installs, or repairs PNPM safely.                                  |
 | 🧹 [manage_npm.sh](file:///Users/gon/dev/auto-scripts/mac/manage_npm.sh)                               | Checks, updates, or repairs NPM isolated to its active release line.                |
 
@@ -99,6 +100,12 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 # List all global npm and pnpm packages
 ./mac/list_global_node_packages.sh
+
+# Audit orphaned residual files from uninstalled applications (Read-only)
+./mac/clean_residual_app_data.sh
+
+# Interactively clean orphaned application caches, preferences & package receipts
+./mac/clean_residual_app_data.sh --clean
 ```
 
 </details>
