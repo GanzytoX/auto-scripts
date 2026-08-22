@@ -12,16 +12,14 @@ print_warning() {
 CLEAN_MODE=0
 DRY_RUN_MODE=1
 AUTO_YES=0
-NO_PAUSE=0
 
 usage() {
-    print -r -- "Usage: $SCRIPT_NAME [--clean] [--dry-run] [--yes] [--no-pause]"
+    print -r -- "Usage: $SCRIPT_NAME [--clean] [--dry-run] [--yes]"
     print -r -- ""
     print -r -- "Options:"
     print -r -- "  --clean     Enable cleanup mode to remove detected residual files and receipts."
     print -r -- "  --dry-run   Audit and report orphaned files without deleting anything (default)."
     print -r -- "  -y, --yes   Auto-confirm cleanup prompts (non-interactive mode)."
-    print -r -- "  --no-pause  Run continuously without prompting between sections."
     print -r -- "  -h, --help  Show this help message."
 }
 
@@ -38,9 +36,6 @@ while (( $# > 0 )); do
         -y|--yes)
             AUTO_YES=1
         ;;
-        --no-pause)
-            NO_PAUSE=1
-        ;;
         -h|--help)
             usage
             exit 0
@@ -53,21 +48,6 @@ while (( $# > 0 )); do
     esac
     shift
 done
-
-prompt_continue() {
-    if [[ ! -t 0 || ! -t 1 || "${AUTO_YES:-0}" == "1" || "${NO_PAUSE:-0}" == "1" ]]; then
-        return 0
-    fi
-    print
-    printf '%s' "${BLUE}Press [Enter] to continue to next section (or 'q' to quit)...${NC} "
-    local response
-    read -r response
-    if [[ "$response" == [qQ] ]]; then
-        print
-        print_info "Process stopped by user."
-        exit 0
-    fi
-}
 
 format_bytes() {
     local bytes="$1"
@@ -380,8 +360,6 @@ print -r -- "  Registered bundle identifiers indexed: $TOTAL_BUNDLES"
 print -r -- "  System & developer protection rules: Active"
 print_success "Inventory discovery completed."
 
-prompt_continue
-
 print
 print_info "[2/4] Orphaned User Library Data (Caches, App Support, Saved State)"
 
@@ -411,8 +389,6 @@ else
     print_success "No orphaned user library files were found. Clean!"
 fi
 
-prompt_continue
-
 print
 print_info "[3/4] Orphaned LaunchAgents & LaunchDaemons"
 
@@ -431,8 +407,6 @@ for item in d.get('orphaned_launch_items', []):
 else
     print_success "No orphaned background services or daemons found. Clean!"
 fi
-
-prompt_continue
 
 print
 print_info "[4/4] Orphaned macOS Package Receipts (pkgutil)"
