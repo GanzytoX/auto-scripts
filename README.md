@@ -151,11 +151,11 @@ powershell -NoProfile -File .\win\manage-application-updates.ps1 -Inventory
 # Query available driver updates via Windows Update COM API
 powershell -NoProfile -File .\win\manage-driver-updates.ps1 -ListDevices
 
-# Node.js, NPM, and PNPM status audit
-powershell -NoProfile -File .\win\manage-node-version.ps1
+# Node.js, NPM, and PNPM status audit (Read-only)
+powershell -NoProfile -File .\win\manage-node-version.ps1 -Check
 powershell -NoProfile -File .\win\list-global-node-packages.ps1
-powershell -NoProfile -File .\win\manage-npm.ps1
-powershell -NoProfile -File .\win\manage-pnpm.ps1
+powershell -NoProfile -File .\win\manage-npm.ps1 -Check
+powershell -NoProfile -File .\win\manage-pnpm.ps1 -Check
 ```
 
 </details>
