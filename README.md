@@ -20,27 +20,27 @@
 
 ### 🍎 macOS Tools (`mac/`)
 
-| Script                                                                                                 | Description                                                                         |
-| :----------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------- |
-| 📋 [get_system_info.sh](file:///Users/gon/dev/auto-scripts/mac/get_system_info.sh)                     | Hardware, OS, battery, GPU, disk, network, and runtime audit (`--brief`, `--json`). |
-| 🍺 [list_homebrew_inventory.sh](file:///Users/gon/dev/auto-scripts/mac/list_homebrew_inventory.sh)     | Lists all Homebrew formulae, casks, taps, and services configured.                  |
-| 🔄 [update_homebrew_packages.sh](file:///Users/gon/dev/auto-scripts/mac/update_homebrew_packages.sh)   | Checks and upgrades Homebrew packages with dry-run support.                         |
-| 🟢 [manage_node_version.sh](file:///Users/gon/dev/auto-scripts/mac/manage_node_version.sh)             | Inspects and safely updates Node.js via active version manager.                     |
-| 🐍 [manage_python_version.sh](file:///Users/gon/dev/auto-scripts/mac/manage_python_version.sh)         | Inspects Python installations and updates patch/minor releases.                     |
-| 📦 [list_global_node_packages.sh](file:///Users/gon/dev/auto-scripts/mac/list_global_node_packages.sh) | Audits global NPM and PNPM packages with versions and file paths.                   |
-| ⚡ [manage_pnpm.sh](file:///Users/gon/dev/auto-scripts/mac/manage_pnpm.sh)                             | Checks, updates, installs, or repairs PNPM safely.                                  |
-| 🧹 [manage_npm.sh](file:///Users/gon/dev/auto-scripts/mac/manage_npm.sh)                               | Checks, updates, or repairs NPM isolated to its active release line.                |
+| Script                                                              | Description                                                                         |
+| :------------------------------------------------------------------ | :---------------------------------------------------------------------------------- |
+| 📋 [get_system_info.sh](mac/get_system_info.sh)                     | Hardware, OS, battery, GPU, disk, network, and runtime audit (`--brief`, `--json`). |
+| 🍺 [list_homebrew_inventory.sh](mac/list_homebrew_inventory.sh)     | Lists all Homebrew formulae, casks, taps, and services configured.                  |
+| 🔄 [update_homebrew_packages.sh](mac/update_homebrew_packages.sh)   | Checks and upgrades Homebrew packages with dry-run support.                         |
+| 🟢 [manage_node_version.sh](mac/manage_node_version.sh)             | Inspects and safely updates Node.js via active version manager.                     |
+| 🐍 [manage_python_version.sh](mac/manage_python_version.sh)         | Inspects Python installations and updates patch/minor releases.                     |
+| 📦 [list_global_node_packages.sh](mac/list_global_node_packages.sh) | Audits global NPM and PNPM packages with versions and file paths.                   |
+| ⚡ [manage_pnpm.sh](mac/manage_pnpm.sh)                             | Checks, updates, installs, or repairs PNPM safely.                                  |
+| 🧹 [manage_npm.sh](mac/manage_npm.sh)                               | Checks, updates, or repairs NPM isolated to its active release line.                |
 
 ### 🪟 Windows Tools (`win/`)
 
-| Script                                                                                                     | Description                                                      |
-| :--------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------- |
-| 🛒 [manage-application-updates.ps1](file:///Users/gon/dev/auto-scripts/win/manage-application-updates.ps1) | Consolidated Winget, Microsoft Store, and NPM app update check.  |
-| 🚗 [manage-driver-updates.ps1](file:///Users/gon/dev/auto-scripts/win/manage-driver-updates.ps1)           | Queries Windows Update COM API for outdated hardware drivers.    |
-| 🟢 [manage-node-version.ps1](file:///Users/gon/dev/auto-scripts/win/manage-node-version.ps1)               | Reports active Node.js release and updates via detected manager. |
-| 📦 [list-global-node-packages.ps1](file:///Users/gon/dev/auto-scripts/win/list-global-node-packages.ps1)   | Lists globally installed NPM and PNPM packages cleanly.          |
-| ⚡ [manage-pnpm.ps1](file:///Users/gon/dev/auto-scripts/win/manage-pnpm.ps1)                               | Controls PNPM installation and updates without mixed methods.    |
-| 🧹 [manage-npm.ps1](file:///Users/gon/dev/auto-scripts/win/manage-npm.ps1)                                 | Inspects or updates NPM safely without elevation side-effects.   |
+| Script                                                                  | Description                                                                            |
+| :---------------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
+| 🛒 [manage-application-updates.ps1](win/manage-application-updates.ps1) | Consolidated Winget, Microsoft Store, and NPM app update check.                        |
+| 🚗 [manage-driver-updates.ps1](win/manage-driver-updates.ps1)           | Queries Windows Update COM API for outdated hardware drivers.                          |
+| 🟢 [manage-node-version.ps1](win/manage-node-version.ps1)               | Reports active Node.js release and updates via detected manager or official installer. |
+| 📦 [list-global-node-packages.ps1](win/list-global-node-packages.ps1)   | Lists globally installed NPM and PNPM packages cleanly.                                |
+| ⚡ [manage-pnpm.ps1](win/manage-pnpm.ps1)                               | Controls PNPM installation and updates without mixed methods.                          |
+| 🧹 [manage-npm.ps1](win/manage-npm.ps1)                                 | Inspects or updates NPM safely without elevation side-effects.                         |
 
 ---
 

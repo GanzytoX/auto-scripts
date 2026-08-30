@@ -56,6 +56,55 @@ function Get-WingetNodePackageId {
     return $null
 }
 
+function Test-WingetVersionAvailable {
+    param(
+        [Parameter(Mandatory)][string]$PackageId,
+        [Parameter(Mandatory)][string]$Version
+    )
+
+    if (-not (Test-CommandAvailable winget)) { return $false }
+
+    $output = (& winget show --id $PackageId --versions --exact --accept-source-agreements --disable-interactivity 2>$null | Out-String)
+    if ($LASTEXITCODE -ne 0 -or -not $output) { return $false }
+
+    $escapedVersion = [Regex]::Escape($Version)
+    return [bool]($output -match "(?m)^\s*$escapedVersion\s*$")
+}
+
+function Invoke-OfficialNodeInstaller {
+    param(
+        [Parameter(Mandatory)][Version]$TargetVersion,
+        [Parameter(Mandatory)][string]$Architecture
+    )
+
+    $archString = switch ($Architecture) {
+        'x64'   { 'x64' }
+        'arm64' { 'arm64' }
+        'ia32'  { 'x86' }
+        'x86'   { 'x86' }
+        default { 'x64' }
+    }
+
+    $downloadUrl = "https://nodejs.org/dist/v$TargetVersion/node-v$TargetVersion-$archString.msi"
+    $installerPath = Join-Path ([IO.Path]::GetTempPath()) ("node-v$TargetVersion-$archString-{0}.msi" -f [Guid]::NewGuid())
+
+    try {
+        Write-Host "Downloading Node.js v$TargetVersion installer from nodejs.org..." -ForegroundColor $script:ColorMuted
+        Invoke-WebRequest -Uri $downloadUrl -OutFile $installerPath -UseBasicParsing -TimeoutSec 120 -ErrorAction Stop
+
+        Write-Host "Running Node.js installer..." -ForegroundColor $script:ColorMuted
+        $process = Start-Process -FilePath "msiexec.exe" -ArgumentList @('/i', "`"$installerPath`"", '/passive') -Wait -PassThru
+        return ($process.ExitCode -eq 0)
+    }
+    catch {
+        Write-ErrorMessage "The Node.js MSI installer failed: $($_.Exception.Message)"
+        return $false
+    }
+    finally {
+        Remove-Item -LiteralPath $installerPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Get-NodeManager {
     param([Parameter(Mandatory)][string]$NodePath)
 
@@ -155,69 +204,94 @@ if ($environment.Version -ge $targetVersion) {
     exit 0
 }
 
+$useDirectInstaller = $false
+if ($manager.Name -eq 'Winget' -and $manager.PackageId) {
+    $wingetHasVersion = Test-WingetVersionAvailable -PackageId $manager.PackageId -Version "$targetVersion"
+    if (-not $wingetHasVersion) {
+        Write-WarningMessage "Node.js v$targetVersion is available on nodejs.org, but is not yet available in Winget."
+        $useDirectInstaller = $true
+    }
+}
+elseif ($manager.Name -eq 'Unknown') {
+    $useDirectInstaller = $true
+}
+
 if ($Check) {
-    Write-WarningMessage "A newer patch is available: $($environment.Version) -> $targetVersion"
+    if ($useDirectInstaller) {
+        Write-WarningMessage "A newer patch is available on nodejs.org: $($environment.Version) -> $targetVersion (can be installed via official MSI installer)."
+    }
+    else {
+        Write-WarningMessage "A newer patch is available: $($environment.Version) -> $targetVersion"
+    }
     exit 0
 }
 
-if ($manager.Name -eq 'Unknown') {
-    Write-ErrorMessage "The active Node.js installation method could not be identified safely."
-    exit 1
+$promptText = if ($useDirectInstaller) {
+    "Install Node.js $targetVersion directly from nodejs.org (MSI)?"
+}
+else {
+    "Install Node.js $targetVersion using $($manager.Name)?"
 }
 
-if (-not (Confirm-Action -Prompt "Install Node.js $targetVersion using $($manager.Name)?" -Yes:$Yes)) {
+if (-not (Confirm-Action -Prompt $promptText -Yes:$Yes)) {
     Write-Success "No packages were changed."
     exit 0
 }
 
 $updateSucceeded = $false
-switch ($manager.Name) {
-    'pnpm' {
-        if (-not (Test-CommandAvailable pnpm)) {
-            Write-ErrorMessage "Node.js is managed by pnpm, but pnpm is unavailable."
-            break
-        }
-        & pnpm runtime set node "$targetVersion" --global
-        $updateSucceeded = $LASTEXITCODE -eq 0
-    }
-    'fnm' {
-        if (-not (Test-CommandAvailable fnm)) {
-            Write-ErrorMessage "Node.js is managed by fnm, but fnm is unavailable."
-            break
-        }
-        & fnm install "$targetVersion"
-        if ($LASTEXITCODE -eq 0) {
-            & fnm default "$targetVersion"
+if ($useDirectInstaller) {
+    $updateSucceeded = Invoke-OfficialNodeInstaller -TargetVersion $targetVersion -Architecture $environment.Architecture
+}
+else {
+    switch ($manager.Name) {
+        'pnpm' {
+            if (-not (Test-CommandAvailable pnpm)) {
+                Write-ErrorMessage "Node.js is managed by pnpm, but pnpm is unavailable."
+                break
+            }
+            & pnpm runtime set node "$targetVersion" --global
             $updateSucceeded = $LASTEXITCODE -eq 0
         }
-    }
-    'nvm-windows' {
-        if (-not (Test-CommandAvailable nvm)) {
-            Write-ErrorMessage "Node.js is managed by nvm-windows, but nvm is unavailable."
-            break
+        'fnm' {
+            if (-not (Test-CommandAvailable fnm)) {
+                Write-ErrorMessage "Node.js is managed by fnm, but fnm is unavailable."
+                break
+            }
+            & fnm install "$targetVersion"
+            if ($LASTEXITCODE -eq 0) {
+                & fnm default "$targetVersion"
+                $updateSucceeded = $LASTEXITCODE -eq 0
+            }
         }
-        & nvm install "$targetVersion"
-        if ($LASTEXITCODE -eq 0) {
-            & nvm use "$targetVersion"
+        'nvm-windows' {
+            if (-not (Test-CommandAvailable nvm)) {
+                Write-ErrorMessage "Node.js is managed by nvm-windows, but nvm is unavailable."
+                break
+            }
+            & nvm install "$targetVersion"
+            if ($LASTEXITCODE -eq 0) {
+                & nvm use "$targetVersion"
+                $updateSucceeded = $LASTEXITCODE -eq 0
+            }
+        }
+        'Volta' {
+            if (-not (Test-CommandAvailable volta)) {
+                Write-ErrorMessage "Node.js is managed by Volta, but Volta is unavailable."
+                break
+            }
+            & volta install "node@$targetVersion"
             $updateSucceeded = $LASTEXITCODE -eq 0
         }
-    }
-    'Volta' {
-        if (-not (Test-CommandAvailable volta)) {
-            Write-ErrorMessage "Node.js is managed by Volta, but Volta is unavailable."
-            break
+        'Winget' {
+            & winget upgrade --id $manager.PackageId --exact --version "$targetVersion" --accept-package-agreements --accept-source-agreements --disable-interactivity
+            $updateSucceeded = $LASTEXITCODE -eq 0
         }
-        & volta install "node@$targetVersion"
-        $updateSucceeded = $LASTEXITCODE -eq 0
-    }
-    'Winget' {
-        & winget upgrade --id $manager.PackageId --exact --version "$targetVersion" --accept-package-agreements --accept-source-agreements --disable-interactivity
-        $updateSucceeded = $LASTEXITCODE -eq 0
     }
 }
 
 if (-not $updateSucceeded) {
-    Write-ErrorMessage "Node.js could not be updated through $($manager.Name)."
+    $methodName = if ($useDirectInstaller) { 'official installer' } else { $manager.Name }
+    Write-ErrorMessage "Node.js could not be updated through $methodName."
     exit 1
 }
 
