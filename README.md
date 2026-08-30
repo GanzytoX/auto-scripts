@@ -20,16 +20,18 @@
 
 ### 🍎 macOS Tools (`mac/`)
 
-| Script                                                              | Description                                                                         |
-| :------------------------------------------------------------------ | :---------------------------------------------------------------------------------- |
-| 📋 [get_system_info.sh](mac/get_system_info.sh)                     | Hardware, OS, battery, GPU, disk, network, and runtime audit (`--brief`, `--json`). |
-| 🍺 [list_homebrew_inventory.sh](mac/list_homebrew_inventory.sh)     | Lists all Homebrew formulae, casks, taps, and services configured.                  |
-| 🔄 [update_homebrew_packages.sh](mac/update_homebrew_packages.sh)   | Checks and upgrades Homebrew packages with dry-run support.                         |
-| 🟢 [manage_node_version.sh](mac/manage_node_version.sh)             | Inspects and safely updates Node.js via active version manager.                     |
-| 🐍 [manage_python_version.sh](mac/manage_python_version.sh)         | Inspects Python installations and updates patch/minor releases.                     |
-| 📦 [list_global_node_packages.sh](mac/list_global_node_packages.sh) | Audits global NPM and PNPM packages with versions and file paths.                   |
-| ⚡ [manage_pnpm.sh](mac/manage_pnpm.sh)                             | Checks, updates, installs, or repairs PNPM safely.                                  |
-| 🧹 [manage_npm.sh](mac/manage_npm.sh)                               | Checks, updates, or repairs NPM isolated to its active release line.                |
+| Script                                                              | Description                                                                            |
+| :------------------------------------------------------------------ | :------------------------------------------------------------------------------------- |
+| 📋 [get_system_info.sh](mac/get_system_info.sh)                     | Hardware, OS, battery, GPU, disk, network, and runtime audit (`--brief`, `--json`).    |
+| 🍺 [list_homebrew_inventory.sh](mac/list_homebrew_inventory.sh)     | Lists all Homebrew formulae, casks, taps, and services configured.                     |
+| 🧾 [list_installed_software.sh](mac/list_installed_software.sh)     | Audits macOS apps, Homebrew packages, PATH entries, executables, and package receipts. |
+| 🔄 [update_homebrew_packages.sh](mac/update_homebrew_packages.sh)   | Checks and upgrades Homebrew packages with dry-run support.                            |
+| 🟢 [manage_node_version.sh](mac/manage_node_version.sh)             | Inspects and safely updates Node.js via active version manager.                        |
+| 🐍 [manage_python_version.sh](mac/manage_python_version.sh)         | Inspects Python installations and updates patch/minor releases.                        |
+| 📦 [list_global_node_packages.sh](mac/list_global_node_packages.sh) | Audits global NPM and PNPM packages with versions and file paths.                      |
+| 🧹 [clean_residual_app_data.sh](mac/clean_residual_app_data.sh)     | Detects and cleans orphaned caches, preferences, LaunchAgents, and package receipts.    |
+| ⚡ [manage_pnpm.sh](mac/manage_pnpm.sh)                             | Checks, updates, installs, or repairs PNPM safely.                                     |
+| 🧹 [manage_npm.sh](mac/manage_npm.sh)                               | Checks, updates, or repairs NPM isolated to its active release line.                   |
 
 ### 🪟 Windows Tools (`win/`)
 
@@ -90,8 +92,20 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 # Complete Homebrew formula, cask & service inventory
 ./mac/list_homebrew_inventory.sh
 
+# List installed macOS applications and Homebrew software (interactive pause per section)
+./mac/list_installed_software.sh
+
+# Run continuously without prompting between sections
+./mac/list_installed_software.sh --no-pause
+
 # List all global npm and pnpm packages
 ./mac/list_global_node_packages.sh
+
+# Audit orphaned residual files from uninstalled applications (Read-only)
+./mac/clean_residual_app_data.sh
+
+# Interactively clean orphaned application caches, preferences & package receipts
+./mac/clean_residual_app_data.sh --clean
 ```
 
 </details>
