@@ -469,16 +469,50 @@ if (( CLEAN_MODE )); then
         fi
     fi
 
-    # 2. Clean User LaunchAgents
+    # 2. Clean LaunchAgents & LaunchDaemons
     if (( ORPHAN_LAUNCH_COUNT > 0 )); then
+        # 2a. User LaunchAgents (~/Library/LaunchAgents)
         USER_LAUNCH_ITEMS="$(python3 -c "import json, sys; d = json.loads(sys.argv[1]); [print(x['path']) for x in d.get('orphaned_launch_items', []) if x['location'].startswith('~')]" "$SCAN_JSON")"
         if [[ -n "$USER_LAUNCH_ITEMS" ]]; then
             if confirm "Move orphaned user LaunchAgents to Trash?"; then
                 while IFS= read -r lpath; do
                     [[ -z "$lpath" || ! -e "$lpath" ]] && continue
+                    launchctl bootout "gui/$(id -u)" "$lpath" 2>/dev/null
                     mv "$lpath" "$HOME/.Trash/" 2>/dev/null || rm -f "$lpath" 2>/dev/null
                 done <<< "$USER_LAUNCH_ITEMS"
                 print_success "Orphaned user LaunchAgents moved to Trash."
+            fi
+        fi
+
+        # 2b. System LaunchAgents/LaunchDaemons (/Library/...) - require admin privileges
+        SYSTEM_LAUNCH_ITEMS="$(python3 -c "import json, sys; d = json.loads(sys.argv[1]); [print(x['path']) for x in d.get('orphaned_launch_items', []) if not x['location'].startswith('~')]" "$SCAN_JSON")"
+        if [[ -n "$SYSTEM_LAUNCH_ITEMS" ]]; then
+            SUDO_CMD=()
+            (( EUID != 0 )) && SUDO_CMD=(sudo)
+            if confirm "Unload and remove orphaned system LaunchAgents/LaunchDaemons (requires administrator privileges)?"; then
+                SYS_REMOVED=0
+                SYS_FAILED=0
+                while IFS= read -r lpath; do
+                    [[ -z "$lpath" || ! -e "$lpath" ]] && continue
+                    if [[ "$lpath" == /Library/LaunchDaemons/* ]]; then
+                        "${SUDO_CMD[@]}" launchctl bootout system "$lpath" </dev/null 2>/dev/null
+                    else
+                        launchctl bootout "gui/$(id -u)" "$lpath" </dev/null 2>/dev/null
+                    fi
+                    if "${SUDO_CMD[@]}" rm -f "$lpath" </dev/null; then
+                        (( SYS_REMOVED++ ))
+                    else
+                        (( SYS_FAILED++ ))
+                        print_error "Failed to remove: $lpath"
+                    fi
+                done <<< "$SYSTEM_LAUNCH_ITEMS"
+                if (( SYS_FAILED == 0 )); then
+                    print_success "Removed $SYS_REMOVED orphaned system background services."
+                else
+                    print_warning "Removed $SYS_REMOVED system services; $SYS_FAILED could not be removed."
+                fi
+            else
+                print_warning "System background services cleanup skipped by user."
             fi
         fi
     fi

@@ -104,7 +104,8 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 # Audit orphaned residual files from uninstalled applications (Read-only)
 ./mac/clean_residual_app_data.sh
 
-# Interactively clean orphaned application caches, preferences & package receipts
+# Interactively clean orphaned caches, preferences, LaunchAgents/LaunchDaemons & package receipts
+# (system-level services in /Library require sudo; you will be prompted for your password)
 ./mac/clean_residual_app_data.sh --clean
 ```
 
