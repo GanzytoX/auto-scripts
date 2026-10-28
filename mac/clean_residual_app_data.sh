@@ -156,7 +156,7 @@ SYSTEM_WHITELIST = {
     "diagnostics_agent", "diagnosticreports", "assistant", "sentrycrash", "io.sentry",
     "kingfisher", "cctclearcutlogger", "electron", "electron-builder", "databases", "websitedata",
     "localstorage", "indexeddb", "gpucache", "code cache", "blob_storage", "default", "crashpad",
-    "installer_telemetry"
+    "installer_telemetry", "intelligence"
 }
 
 DEV_TOOLS = {
