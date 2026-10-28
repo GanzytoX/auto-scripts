@@ -145,7 +145,7 @@ fi
 
 print_warning "A newer v$CURRENT_MAJOR patch is available: v$CURRENT_VERSION -> v$LATEST_SAME_MAJOR"
 if (( ! UPDATE_REQUESTED )); then
-    print_info "Run '$SCRIPT_NAME --update' to install it with the detected manager."
+    print_info "Run '${0:A} --update' to install it with the detected manager."
     exit 0
 fi
 
