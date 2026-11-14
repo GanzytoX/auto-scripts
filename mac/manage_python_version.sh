@@ -6,17 +6,20 @@ source "$SCRIPT_DIR/lib/common.zsh" || exit 1
 
 AUTO_YES=0
 UPDATE_REQUESTED=0
+WITH_PACKAGES=1
 
 usage() {
-    print -r -- "Usage: $SCRIPT_NAME [--update] [--yes]"
+    print -r -- "Usage: $SCRIPT_NAME [--update] [--yes] [--no-packages]"
     print -r -- "  --update  Offer to install the latest patch in the active minor line."
     print -r -- "  --yes     Confirm the update non-interactively (requires --update)."
+    print -r -- "  --no-packages  Skip listing installed packages for each interpreter."
 }
 
 while (( $# > 0 )); do
     case "$1" in
         -u|--update) UPDATE_REQUESTED=1 ;;
         -y|--yes) AUTO_YES=1 ;;
+        --no-packages) WITH_PACKAGES=0 ;;
         -h|--help) usage; exit 0 ;;
         *) print_error "Unknown option: $1"; usage >&2; exit 2 ;;
     esac
@@ -83,53 +86,110 @@ print -r -- "${BLUE}Current version:${NC} $CURRENT_VERSION"
 print -r -- "${BLUE}Active executable:${NC} $CURRENT_EXECUTABLE_REAL"
 print -r -- "${BLUE}Detected manager:${NC} $MANAGER"
 
-INSTALLED_VERSIONS_RAW="$({
-    print -r -- "$CURRENT_VERSION"
+PROBE_PY='
+import json, os, platform, sys
 
-    if command_exists pyenv; then
-        pyenv versions --bare 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' || true
-    fi
+# Skip virtual environments: only report real interpreters.
+if sys.prefix != sys.base_prefix:
+    sys.exit(0)
 
-    if command_exists asdf; then
-        asdf list python 2>/dev/null | sed -E 's/^[*[:space:]]+//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' || true
-    fi
+packages = None
+if os.environ.get("WITH_PKGS") == "1":
+    try:
+        from importlib import metadata
+        found = {}
+        for dist in metadata.distributions():
+            name = dist.metadata["Name"]
+            if name:
+                found[name] = dist.version
+        packages = sorted(found.items(), key=lambda item: item[0].lower())
+    except Exception:
+        packages = None
 
-    if command_exists brew; then
-        brew list --versions 2>/dev/null | awk '/^python(@[0-9]+\.[0-9]+)? / { for (i = 2; i <= NF; i++) print $i }'
-    fi
+print(json.dumps({
+    "version": platform.python_version(),
+    "exe": os.path.realpath(sys.executable),
+    "packages": packages,
+}))
+'
 
-    if command_exists uv; then
-        uv python list --only-installed 2>/dev/null | awk '{ print $1 }' | sed -nE 's/^cpython-([0-9]+\.[0-9]+\.[0-9]+).*/\1/p'
-    fi
-
-    # Any other interpreter on PATH or in well-known locations (system, Xcode, python.org, etc.)
-    for candidate in \
-        ${^${(s/:/)PATH}}/python3(N-*) \
-        ${^${(s/:/)PATH}}/python3.<->(N-*) \
-        /usr/bin/python3(N-*) \
-        /Library/Frameworks/Python.framework/Versions/*/bin/python3(N-*) \
-        /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/*/bin/python3(N-*) \
-        /Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/*/bin/python3(N-*); do
-        "$candidate" -c 'import platform; print(platform.python_version())' 2>/dev/null
-    done
-} | "$PYTHON_BIN" -c '
+AGGREGATE_PY='
+import json
+import os
 import re
 import sys
 
 def version_key(version):
     return tuple(int(part) for part in version.split("."))
 
-versions = {line.strip() for line in sys.stdin if re.fullmatch(r"\d+\.\d+\.\d+", line.strip())}
-for version in sorted(versions, key=version_key):
-    print(version)
-')" || {
+show_packages = os.environ.get("WITH_PKGS") == "1"
+current_exe = os.environ.get("CURRENT_EXE", "")
+
+interpreters = {}
+for line in sys.stdin:
+    line = line.strip()
+    if not line:
+        continue
+    try:
+        data = json.loads(line)
+    except ValueError:
+        continue
+    if re.fullmatch(r"\d+\.\d+\.\d+", data.get("version", "")) and data.get("exe"):
+        interpreters.setdefault(data["exe"], data)
+
+ordered = sorted(interpreters.values(), key=lambda d: (version_key(d["version"]), d["exe"]))
+for data in ordered:
+    marker = "  (active)" if data["exe"] == current_exe else ""
+    print("  - %s%s  %s" % (data["version"], marker, data["exe"]))
+    if not show_packages:
+        continue
+    packages = data["packages"]
+    if packages is None:
+        print("      Packages: unavailable")
+    elif not packages:
+        print("      Packages: none")
+    else:
+        width = max(len(name) for name, _ in packages)
+        print(f"      Packages ({len(packages)}):")
+        for name, version in packages:
+            print(f"        {name.ljust(width)}  {version}")
+'
+
+typeset -a PY_CANDIDATES
+PY_CANDIDATES=(
+    "$PYTHON_BIN"
+    ${PYENV_BASE}/versions/*/bin/python(N-*)
+    ${ASDF_BASE}/installs/python/*/bin/python(N-*)
+    ${^${(s/:/)PATH}}/python3(N-*)
+    ${^${(s/:/)PATH}}/python3.<->(N-*)
+    /usr/bin/python3(N-*)
+    /Library/Frameworks/Python.framework/Versions/*/bin/python3(N-*)
+    /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/*/bin/python3(N-*)
+    /Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/*/bin/python3(N-*)
+)
+
+if command_exists brew; then
+    PY_BREW_PREFIX="$(brew --prefix 2>/dev/null)"
+    [[ -n "$PY_BREW_PREFIX" ]] && PY_CANDIDATES+=( "$PY_BREW_PREFIX"/opt/python@*/bin/python3(N-*) )
+fi
+
+if command_exists uv; then
+    PY_CANDIDATES+=( ${(f)"$(uv python list --only-installed 2>/dev/null | awk '{ print $2 }')"} )
+fi
+
+INSTALLED_VERSIONS_RAW="$({
+    for candidate in "${PY_CANDIDATES[@]}"; do
+        [[ -n "$candidate" && -x "$candidate" ]] || continue
+        (cd / && WITH_PKGS="$WITH_PACKAGES" "$candidate" -c "$PROBE_PY" 2>/dev/null)
+    done
+} | WITH_PKGS="$WITH_PACKAGES" CURRENT_EXE="$CURRENT_EXECUTABLE_REAL" "$PYTHON_BIN" -c "$AGGREGATE_PY")" || {
     print_error "Could not build the Python version inventory."
     exit 1
 }
 
 print
-print_info "Installed versions detected:"
-print -r -- "$INSTALLED_VERSIONS_RAW" | sed 's/^/  - /'
+print_info "Installed Python interpreters detected:"
+print -r -- "$INSTALLED_VERSIONS_RAW"
 
 if ! command_exists curl; then
     print_error "Error: curl is required to check Python releases."

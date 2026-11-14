@@ -27,7 +27,7 @@
 | 🧾 [list_installed_software.sh](mac/list_installed_software.sh)     | Audits macOS apps, Homebrew packages, PATH entries, executables, and package receipts. |
 | 🔄 [update_homebrew_packages.sh](mac/update_homebrew_packages.sh)   | Checks and upgrades Homebrew packages with dry-run support.                            |
 | 🟢 [manage_node_version.sh](mac/manage_node_version.sh)             | Inspects and safely updates Node.js via active version manager.                        |
-| 🐍 [manage_python_version.sh](mac/manage_python_version.sh)         | Lists all Python installs (incl. uv, system) and updates patch releases.               |
+| 🐍 [manage_python_version.sh](mac/manage_python_version.sh)         | Lists all Python installs with their packages and updates patch releases.              |
 | 📦 [list_global_node_packages.sh](mac/list_global_node_packages.sh) | Audits global NPM and PNPM packages with versions and file paths.                      |
 | 🧹 [clean_residual_app_data.sh](mac/clean_residual_app_data.sh)     | Detects and cleans orphaned caches, preferences, LaunchAgents, and package receipts.   |
 | ⚡ [manage_pnpm.sh](mac/manage_pnpm.sh)                             | Checks, updates, installs, or repairs PNPM safely.                                     |
@@ -124,6 +124,9 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 # Check Node.js and Python status (Read-only)
 ./mac/manage_node_version.sh
 ./mac/manage_python_version.sh
+
+# Same, without listing packages per Python interpreter
+./mac/manage_python_version.sh --no-packages
 
 # Perform Node.js or Python update via detected manager
 ./mac/manage_node_version.sh --update
