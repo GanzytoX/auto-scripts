@@ -27,9 +27,9 @@
 | 🧾 [list_installed_software.sh](mac/list_installed_software.sh)     | Audits macOS apps, Homebrew packages, PATH entries, executables, and package receipts. |
 | 🔄 [update_homebrew_packages.sh](mac/update_homebrew_packages.sh)   | Checks and upgrades Homebrew packages with dry-run support.                            |
 | 🟢 [manage_node_version.sh](mac/manage_node_version.sh)             | Inspects and safely updates Node.js via active version manager.                        |
-| 🐍 [manage_python_version.sh](mac/manage_python_version.sh)         | Inspects Python installations and updates patch/minor releases.                        |
+| 🐍 [manage_python_version.sh](mac/manage_python_version.sh)         | Lists all Python installs (incl. uv, system) and updates patch releases.               |
 | 📦 [list_global_node_packages.sh](mac/list_global_node_packages.sh) | Audits global NPM and PNPM packages with versions and file paths.                      |
-| 🧹 [clean_residual_app_data.sh](mac/clean_residual_app_data.sh)     | Detects and cleans orphaned caches, preferences, LaunchAgents, and package receipts.    |
+| 🧹 [clean_residual_app_data.sh](mac/clean_residual_app_data.sh)     | Detects and cleans orphaned caches, preferences, LaunchAgents, and package receipts.   |
 | ⚡ [manage_pnpm.sh](mac/manage_pnpm.sh)                             | Checks, updates, installs, or repairs PNPM safely.                                     |
 | 🧹 [manage_npm.sh](mac/manage_npm.sh)                               | Checks, updates, or repairs NPM isolated to its active release line.                   |
 
