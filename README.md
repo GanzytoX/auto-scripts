@@ -35,14 +35,15 @@
 
 ### 🪟 Windows Tools (`win/`)
 
-| Script                                                                  | Description                                                                            |
-| :---------------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
-| 🛒 [manage-application-updates.ps1](win/manage-application-updates.ps1) | Consolidated Winget, Microsoft Store, and NPM app update check.                        |
-| 🚗 [manage-driver-updates.ps1](win/manage-driver-updates.ps1)           | Queries Windows Update COM API for outdated hardware drivers.                          |
-| 🟢 [manage-node-version.ps1](win/manage-node-version.ps1)               | Reports active Node.js release and updates via detected manager or official installer. |
-| 📦 [list-global-node-packages.ps1](win/list-global-node-packages.ps1)   | Lists globally installed NPM and PNPM packages cleanly.                                |
-| ⚡ [manage-pnpm.ps1](win/manage-pnpm.ps1)                               | Controls PNPM installation and updates without mixed methods.                          |
-| 🧹 [manage-npm.ps1](win/manage-npm.ps1)                                 | Inspects or updates NPM safely without elevation side-effects.                         |
+| Script                                                                  | Description                                                                             |
+| :---------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
+| 🛒 [manage-application-updates.ps1](win/manage-application-updates.ps1) | Consolidated Winget, Microsoft Store, and NPM app update check.                         |
+| 🚗 [manage-driver-updates.ps1](win/manage-driver-updates.ps1)           | Queries Windows Update COM API for outdated hardware drivers.                           |
+| 🟢 [manage-node-version.ps1](win/manage-node-version.ps1)               | Reports active Node.js release and updates via detected manager or official installer.  |
+| 📦 [list-global-node-packages.ps1](win/list-global-node-packages.ps1)   | Lists globally installed NPM and PNPM packages cleanly.                                 |
+| ⚡ [manage-pnpm.ps1](win/manage-pnpm.ps1)                               | Controls PNPM installation and updates without mixed methods.                           |
+| 🧹 [manage-npm.ps1](win/manage-npm.ps1)                                 | Inspects or updates NPM safely without elevation side-effects.                          |
+| 🗑️ [clean-system-junk.ps1](win/clean-system-junk.ps1)                   | Scans and removes temp files, caches and crash dumps to free space (scan-only default). |
 
 ---
 
@@ -160,6 +161,9 @@ powershell -NoProfile -File .\win\manage-node-version.ps1 -Check
 powershell -NoProfile -File .\win\list-global-node-packages.ps1
 powershell -NoProfile -File .\win\manage-npm.ps1 -Check
 powershell -NoProfile -File .\win\manage-pnpm.ps1 -Check
+
+# Scan how much junk (temp, caches, crash dumps) could be freed; deletes nothing
+powershell -NoProfile -File .\win\clean-system-junk.ps1
 ```
 
 </details>
@@ -186,7 +190,27 @@ powershell -NoProfile -File .\win\manage-driver-updates.ps1 -Update -Restart -Ye
 powershell -NoProfile -File .\win\manage-pnpm.ps1 -Install -InstallMethod Standalone
 powershell -NoProfile -File .\win\manage-pnpm.ps1 -Install -InstallMethod Npm
 powershell -NoProfile -File .\win\manage-pnpm.ps1 -Install -InstallMethod Corepack
+
+# Delete junk files (run as Administrator to include system caches)
+powershell -NoProfile -File .\win\clean-system-junk.ps1 -Clean
+# Also empty the Recycle Bin and run Windows component store cleanup
+powershell -NoProfile -File .\win\clean-system-junk.ps1 -Clean -IncludeRecycleBin -Deep
+# Close browsers/apps that lock caches without asking (otherwise it asks)
+powershell -NoProfile -File .\win\clean-system-junk.ps1 -Clean -CloseApps
 ```
+
+**Run it from any folder** by adding a function to your PowerShell profile (once):
+
+```powershell
+if (-not (Test-Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force | Out-Null }
+Add-Content $PROFILE "`nfunction clean-junk { & 'C:\dev\auto-scripts\win\clean-system-junk.ps1' @args }"
+. $PROFILE
+
+clean-junk                  # scan only
+clean-junk -Clean -CloseApps
+```
+
+> ⚠️ **Browser caches and security software**: some antivirus suites (for example ESET) block deletion of browser profile folders even for their owner. The script reports these files as `access denied` and does not bypass the protection. Clear those caches from the browser itself instead (`chrome://settings/clearBrowserData`, `edge://settings/clearBrowserData`, `brave://settings/clearBrowserData`, keeping only "Cached images and files" checked).
 
 </details>
 
