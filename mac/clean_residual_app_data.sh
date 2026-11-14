@@ -62,6 +62,45 @@ format_bytes() {
     fi
 }
 
+HOME_REAL="${HOME:A}"
+DOWNLOADS_REAL="$HOME_REAL/Downloads"
+
+# True when the path is the Downloads folder, inside it, or a parent that contains it.
+is_protected_path() {
+    local p="${1:A}"
+    [[ "$p" == "$DOWNLOADS_REAL" || "$p" == "$DOWNLOADS_REAL"/* || "$DOWNLOADS_REAL" == "$p"/* ]]
+}
+
+# remove_path <path> <use_sudo 0|1>
+remove_path() {
+    local p="$1" use_sudo="${2:-0}"
+    [[ -z "$p" || "$p" == "/" ]] && return 1
+    [[ ! -e "$p" && ! -L "$p" ]] && return 1
+    if is_protected_path "$p"; then
+        print_warning "Skipped protected path: $p"
+        return 1
+    fi
+    if (( use_sudo )) && (( EUID != 0 )); then
+        sudo rm -rf -- "$p" </dev/null 2>/dev/null
+    else
+        rm -rf -- "$p" 2>/dev/null
+    fi
+    [[ ! -e "$p" && ! -L "$p" ]]
+}
+
+# Like confirm, but --yes never auto-approves (for irreversible deletions).
+confirm_strict() {
+    [[ -t 0 ]] || return 1
+    printf '%s [y/N] ' "$1"
+    local answer
+    read -r answer
+    [[ "$answer" == [yY] || "$answer" == [yY][eE][sS] ]]
+}
+
+scan_query() {
+    python3 -c "import json, sys; d = json.loads(sys.argv[1]); $1" "$SCAN_JSON"
+}
+
 clear_screen
 print_info "=== macOS Residual Application Data Cleaner ==="
 if (( DRY_RUN_MODE )); then
@@ -78,6 +117,34 @@ installed_vendor_prefixes = set()
 installed_names = set()
 installed_words = set()
 installed_raw_apps = []
+
+HOME = os.path.expanduser("~")
+LIB = os.path.join(HOME, "Library")
+DOWNLOADS = os.path.realpath(os.path.join(HOME, "Downloads"))
+
+def protected(path):
+    rp = os.path.realpath(path)
+    return rp == DOWNLOADS or rp.startswith(DOWNLOADS + os.sep) or DOWNLOADS.startswith(rp + os.sep)
+
+def path_size(path):
+    total = 0
+    try:
+        if os.path.islink(path):
+            return 0
+        if os.path.isdir(path):
+            for r, _, fnames in os.walk(path):
+                for f in fnames:
+                    fp = os.path.join(r, f)
+                    if not os.path.islink(fp):
+                        try:
+                            total += os.path.getsize(fp)
+                        except Exception:
+                            pass
+        else:
+            total = os.path.getsize(path)
+    except Exception:
+        return 0
+    return total
 
 search_dirs = [
     "/Applications",
@@ -156,7 +223,7 @@ SYSTEM_WHITELIST = {
     "diagnostics_agent", "diagnosticreports", "assistant", "sentrycrash", "io.sentry",
     "kingfisher", "cctclearcutlogger", "electron", "electron-builder", "databases", "websitedata",
     "localstorage", "indexeddb", "gpucache", "code cache", "blob_storage", "default", "crashpad",
-    "installer_telemetry", "intelligence"
+    "installer_telemetry", "intelligence", "mobilesync"
 }
 
 DEV_TOOLS = {
@@ -193,48 +260,50 @@ def is_safe_or_active(item_name):
     return False
 
 scan_roots = [
-    os.path.expanduser("~/Library/Application Support"),
-    os.path.expanduser("~/Library/Caches"),
-    os.path.expanduser("~/Library/Preferences"),
-    os.path.expanduser("~/Library/Saved Application State"),
-    os.path.expanduser("~/Library/HTTPStorages"),
-    os.path.expanduser("~/Library/WebKit"),
-    os.path.expanduser("~/Library/Logs")
+    os.path.join(LIB, "Application Support"),
+    os.path.join(LIB, "Caches"),
+    os.path.join(LIB, "Preferences"),
+    os.path.join(LIB, "Preferences", "ByHost"),
+    os.path.join(LIB, "Saved Application State"),
+    os.path.join(LIB, "HTTPStorages"),
+    os.path.join(LIB, "WebKit"),
+    os.path.join(LIB, "Logs"),
+    os.path.join(LIB, "Containers"),
+    os.path.join(LIB, "Group Containers"),
+    os.path.join(LIB, "Cookies"),
+    os.path.join(LIB, "Application Scripts"),
+    "/Library/Application Support",
+    "/Library/Caches",
+    "/Library/Preferences",
+    "/Library/Logs"
 ]
 
 orphaned_user_files = []
 
 for uroot in scan_roots:
-    if not os.path.exists(uroot):
+    try:
+        entries = os.listdir(uroot)
+    except Exception:
         continue
-    for item in os.listdir(uroot):
+    for item in entries:
         full_path = os.path.join(uroot, item)
         if item.startswith(".") or item.lower().startswith("com.apple."):
+            continue
+        if protected(full_path):
+            continue
+        if re.match(r"^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$", item):
             continue
         base_name = item
         for ext in [".savedState", ".plist", ".binarycookies", ".log"]:
             if base_name.endswith(ext):
                 base_name = base_name[:-len(ext)]
         if not is_safe_or_active(base_name):
-            size_bytes = 0
-            try:
-                if os.path.islink(full_path):
-                    size_bytes = 0
-                elif os.path.isdir(full_path):
-                    for r, _, fnames in os.walk(full_path):
-                        for f in fnames:
-                            fp = os.path.join(r, f)
-                            if not os.path.islink(fp):
-                                size_bytes += os.path.getsize(fp)
-                else:
-                    size_bytes = os.path.getsize(full_path)
-            except Exception:
-                size_bytes = 0
             orphaned_user_files.append({
                 "path": full_path,
                 "name": item,
-                "location": uroot.replace(os.path.expanduser("~"), "~"),
-                "size_bytes": size_bytes
+                "location": uroot.replace(HOME, "~"),
+                "size_bytes": path_size(full_path),
+                "system": not full_path.startswith(HOME + os.sep)
             })
 
 launch_roots = [
@@ -328,19 +397,84 @@ for pkg in pkgs:
     if found_count == 0:
         orphaned_receipts.append(pkg)
 
+orphan_paths = {o["path"] for o in orphaned_user_files}
+
+def kids(path, skip_apple=False):
+    out = []
+    try:
+        names = sorted(os.listdir(path))
+    except Exception:
+        return out
+    for n in names:
+        if n.startswith("."):
+            continue
+        if skip_apple and n.lower().startswith("com.apple."):
+            continue
+        fp = os.path.join(path, n)
+        if fp in orphan_paths or protected(fp):
+            continue
+        out.append(fp)
+    return out
+
+def log_kids(root):
+    out = []
+    for fp in kids(root):
+        if os.path.basename(fp) == "DiagnosticReports" and os.path.isdir(fp):
+            out.extend(kids(fp))
+        else:
+            out.append(fp)
+    return out
+
+junk_defs = [
+    ("user_caches", "User caches (active apps)", False, False, kids(os.path.join(LIB, "Caches"), True)),
+    ("user_logs", "User logs & crash reports", False, False, log_kids(os.path.join(LIB, "Logs"))),
+    ("xcode_derived", "Xcode DerivedData", False, False, kids(os.path.join(LIB, "Developer", "Xcode", "DerivedData"))),
+    ("xcode_devsupport", "Xcode iOS DeviceSupport (re-downloads on connect)", False, False, kids(os.path.join(LIB, "Developer", "Xcode", "iOS DeviceSupport"))),
+    ("sim_caches", "CoreSimulator caches", False, False, kids(os.path.join(LIB, "Developer", "CoreSimulator", "Caches"))),
+    ("npm_cache", "npm cache (~/.npm/_cacache)", False, False, kids(os.path.join(HOME, ".npm", "_cacache"))),
+    ("system_caches", "System caches (/Library/Caches)", True, False, kids("/Library/Caches", True)),
+    ("system_logs", "System logs (/Library/Logs)", True, False, log_kids("/Library/Logs")),
+    ("trash", "Trash", False, False, kids(os.path.join(HOME, ".Trash"))),
+    ("ios_backups", "iOS device backups (IRREVERSIBLE)", False, True, kids(os.path.join(LIB, "Application Support", "MobileSync", "Backup")))
+]
+
+junk_items = []
+for jid, label, system, irreversible, paths in junk_defs:
+    if not paths:
+        continue
+    junk_items.append({
+        "id": jid,
+        "label": label,
+        "system": system,
+        "irreversible": irreversible,
+        "paths": paths,
+        "size_bytes": sum(path_size(x) for x in paths)
+    })
+
+tm_snapshots = []
+try:
+    tm_out = subprocess.check_output(["tmutil", "listlocalsnapshotdates", "/"], text=True, stderr=subprocess.DEVNULL)
+    for line in tm_out.splitlines():
+        if re.match(r"^\d{4}-\d{2}-\d{2}-\d{6}$", line.strip()):
+            tm_snapshots.append(line.strip())
+except Exception:
+    pass
+
 output_data = {
     "total_apps": len(installed_raw_apps),
     "total_bundles": len(installed_bundles),
     "orphaned_user_files": orphaned_user_files,
     "orphaned_launch_items": orphaned_launch_items,
-    "orphaned_receipts": orphaned_receipts
+    "orphaned_receipts": orphaned_receipts,
+    "junk_items": junk_items,
+    "tm_snapshots": tm_snapshots
 }
 
 print(json.dumps(output_data))
 '
 
 print
-print_info "[1/4] Active System & Application Inventory"
+print_info "[1/5] Active System & Application Inventory"
 if ! command_exists python3; then
     print_error "Python 3 is required to inspect application bundles and package metadata."
     exit 1
@@ -361,10 +495,13 @@ print -r -- "  System & developer protection rules: Active"
 print_success "Inventory discovery completed."
 
 print
-print_info "[2/4] Orphaned User Library Data (Caches, App Support, Saved State)"
+print_info "[2/5] Orphaned App Data (user & system Library, containers, caches, prefs)"
 
 ORPHAN_FILES_COUNT="$(python3 -c "import json, sys; d = json.loads(sys.argv[1]); print(len(d.get('orphaned_user_files', [])))" "$SCAN_JSON")"
 TOTAL_BYTES="$(python3 -c "import json, sys; d = json.loads(sys.argv[1]); print(sum(x.get('size_bytes', 0) for x in d.get('orphaned_user_files', [])))" "$SCAN_JSON")"
+
+USER_ORPHAN_COUNT="$(scan_query "print(sum(1 for x in d['orphaned_user_files'] if not x['system']))")"
+SYS_ORPHAN_COUNT="$(scan_query "print(sum(1 for x in d['orphaned_user_files'] if x['system']))")"
 
 if (( ORPHAN_FILES_COUNT > 0 )); then
     printf '  %-50s %-12s %s\n' "Residual Item" "Size" "Location"
@@ -390,7 +527,7 @@ else
 fi
 
 print
-print_info "[3/4] Orphaned LaunchAgents & LaunchDaemons"
+print_info "[3/5] Orphaned LaunchAgents & LaunchDaemons"
 
 ORPHAN_LAUNCH_COUNT="$(python3 -c "import json, sys; d = json.loads(sys.argv[1]); print(len(d.get('orphaned_launch_items', [])))" "$SCAN_JSON")"
 
@@ -409,7 +546,7 @@ else
 fi
 
 print
-print_info "[4/4] Orphaned macOS Package Receipts (pkgutil)"
+print_info "[4/5] Orphaned macOS Package Receipts (pkgutil)"
 
 ORPHAN_RECEIPTS_COUNT="$(python3 -c "import json, sys; d = json.loads(sys.argv[1]); print(len(d.get('orphaned_receipts', [])))" "$SCAN_JSON")"
 
@@ -426,9 +563,44 @@ else
 fi
 
 print
+print_info "[5/5] General Junk (caches, logs, dev caches, Trash, backups, snapshots)"
+print -r -- "  Protected (never touched): $DOWNLOADS_REAL"
+
+JUNK_COUNT="$(scan_query "print(len(d['junk_items']))")"
+JUNK_BYTES="$(scan_query "print(sum(x['size_bytes'] for x in d['junk_items']))")"
+TM_COUNT="$(scan_query "print(len(d['tm_snapshots']))")"
+
+if (( JUNK_COUNT > 0 )); then
+    printf '  %-58s %-12s %s\n' "Category" "Size" "Items"
+    printf '  %-58s %-12s %s\n' "----------------------------------------------------------" "------------" "-----"
+    python3 -c "
+import json, sys
+d = json.loads(sys.argv[1])
+for it in d['junk_items']:
+    size = it['size_bytes']
+    if size < 1024:
+        s_str = f'{size} B'
+    elif size < 1048576:
+        s_str = f'{size/1024.0:.1f} KB'
+    elif size < 1073741824:
+        s_str = f'{size/1048576.0:.2f} MB'
+    else:
+        s_str = f'{size/1073741824.0:.2f} GB'
+    print(f\"  {it['label'][:56]:<58} {s_str:<12} {len(it['paths'])}\")
+" "$SCAN_JSON"
+    print_warning "Total general junk: $JUNK_COUNT categories ($(format_bytes "$JUNK_BYTES"))"
+else
+    print_success "No general junk found. Clean!"
+fi
+
+if (( TM_COUNT > 0 )); then
+    print_warning "Time Machine local snapshots: $TM_COUNT"
+fi
+
+print
 print_info "=== Summary & Action Plan ==="
 
-TOTAL_ITEMS=$(( ORPHAN_FILES_COUNT + ORPHAN_LAUNCH_COUNT + ORPHAN_RECEIPTS_COUNT ))
+TOTAL_ITEMS=$(( ORPHAN_FILES_COUNT + ORPHAN_LAUNCH_COUNT + ORPHAN_RECEIPTS_COUNT + JUNK_COUNT + TM_COUNT ))
 
 if (( TOTAL_ITEMS == 0 )); then
     print_success "Your system is completely clean! No residual application data detected."
@@ -436,7 +608,7 @@ if (( TOTAL_ITEMS == 0 )); then
 fi
 
 if (( DRY_RUN_MODE )); then
-    print_info "Audit complete: Found $ORPHAN_FILES_COUNT user files/caches, $ORPHAN_LAUNCH_COUNT background services, and $ORPHAN_RECEIPTS_COUNT package receipts."
+    print_info "Audit complete: Found $ORPHAN_FILES_COUNT orphaned app data items, $ORPHAN_LAUNCH_COUNT background services, $ORPHAN_RECEIPTS_COUNT package receipts, $JUNK_COUNT junk categories and $TM_COUNT local snapshots."
     print -r -- "To clean these items, run:"
     print -r -- "  ${GREEN}$0 --clean${NC}"
     if (( ORPHAN_RECEIPTS_COUNT > 0 )); then
@@ -452,20 +624,100 @@ fi
 
 # Cleanup mode execution
 if (( CLEAN_MODE )); then
+    # 0. General junk (runs first so Trash emptying cannot remove this run's recoverable moves)
+    if (( JUNK_COUNT > 0 )); then
+        while IFS=$'\t' read -r -u3 jid jsys jirr jsize jcount jlabel; do
+            jprompt="Delete $jcount items from '$jlabel' ($(format_bytes "$jsize"))?"
+            (( jsys )) && jprompt="$jprompt (requires administrator privileges)"
+            if (( jirr )); then
+                confirm_strict "$jprompt" || { print_warning "Skipped: $jlabel"; continue }
+            else
+                confirm "$jprompt" || { print_warning "Skipped: $jlabel"; continue }
+            fi
+            jremoved=0
+            jfailed=0
+            while IFS= read -r -u4 jpath; do
+                if remove_path "$jpath" "$jsys"; then
+                    (( jremoved++ ))
+                else
+                    (( jfailed++ ))
+                fi
+            done 4< <(scan_query "[print(p) for i in d['junk_items'] if i['id'] == '$jid' for p in i['paths']]")
+            if (( jfailed == 0 )); then
+                print_success "$jlabel: removed $jremoved items."
+            else
+                print_warning "$jlabel: removed $jremoved items; $jfailed could not be removed."
+            fi
+        done 3< <(scan_query "[print('\t'.join([i['id'], '1' if i['system'] else '0', '1' if i['irreversible'] else '0', str(i['size_bytes']), str(len(i['paths'])), i['label']])) for i in d['junk_items']]")
+    fi
+
+    if (( TM_COUNT > 0 )); then
+        if confirm_strict "Delete $TM_COUNT Time Machine local snapshots (requires administrator privileges)?"; then
+            while IFS= read -r -u3 snap; do
+                if (( EUID == 0 )); then
+                    tmutil deletelocalsnapshots "$snap" </dev/null >/dev/null 2>&1
+                else
+                    sudo tmutil deletelocalsnapshots "$snap" </dev/null >/dev/null 2>&1
+                fi
+            done 3< <(scan_query "[print(x) for x in d['tm_snapshots']]")
+            print_success "Local snapshots deletion attempted."
+        else
+            print_warning "Time Machine snapshots skipped."
+        fi
+    fi
+
     # 1. Clean User Space Residuals
-    if (( ORPHAN_FILES_COUNT > 0 )); then
-        if confirm "Move $ORPHAN_FILES_COUNT orphaned user files/caches to Trash ($FORMATTED_SPACE)?"; then
+    if (( USER_ORPHAN_COUNT > 0 )); then
+        if confirm "Move $USER_ORPHAN_COUNT orphaned user files/caches to Trash?"; then
             TRASH_DIR="$HOME/.Trash/residual_apps_$(date +%Y%m%d_%H%M%S)"
             mkdir -p "$TRASH_DIR" 2>/dev/null
             CLEANED_COUNT=0
-            while IFS= read -r item_path; do
+            FAILED_COUNT=0
+            while IFS= read -r -u3 item_path; do
                 [[ -z "$item_path" || ! -e "$item_path" ]] && continue
-                mv "$item_path" "$TRASH_DIR/" 2>/dev/null || rm -rf "$item_path" 2>/dev/null
-                (( CLEANED_COUNT++ ))
-            done < <(python3 -c "import json, sys; d = json.loads(sys.argv[1]); [print(x['path']) for x in d.get('orphaned_user_files', [])]" "$SCAN_JSON")
-            print_success "Moved $CLEANED_COUNT items to Trash ($TRASH_DIR)."
+                if is_protected_path "$item_path"; then
+                    print_warning "Skipped protected path: $item_path"
+                    continue
+                fi
+                if mv "$item_path" "$TRASH_DIR/${CLEANED_COUNT}_${item_path:t}" 2>/dev/null; then
+                    (( CLEANED_COUNT++ ))
+                else
+                    (( FAILED_COUNT++ ))
+                fi
+            done 3< <(scan_query "[print(x['path']) for x in d['orphaned_user_files'] if not x['system']]")
+            print_success "Moved $CLEANED_COUNT items to Trash ($TRASH_DIR). Failed: $FAILED_COUNT."
         else
             print_warning "User residual cleanup skipped by user."
+        fi
+    fi
+
+    # 1b. System-level residuals (/Library) - moved to Trash with admin privileges
+    if (( SYS_ORPHAN_COUNT > 0 )); then
+        if confirm "Move $SYS_ORPHAN_COUNT orphaned /Library items to Trash (requires administrator privileges)?"; then
+            TRASH_DIR="${TRASH_DIR:-$HOME/.Trash/residual_apps_$(date +%Y%m%d_%H%M%S)}"
+            mkdir -p "$TRASH_DIR" 2>/dev/null
+            SYS_MOVED=0
+            SYS_MOVE_FAILED=0
+            while IFS= read -r -u3 item_path; do
+                [[ -z "$item_path" || ! -e "$item_path" ]] && continue
+                if is_protected_path "$item_path"; then
+                    print_warning "Skipped protected path: $item_path"
+                    continue
+                fi
+                if (( EUID == 0 )); then
+                    mv "$item_path" "$TRASH_DIR/sys_${SYS_MOVED}_${item_path:t}" 2>/dev/null
+                else
+                    sudo mv "$item_path" "$TRASH_DIR/sys_${SYS_MOVED}_${item_path:t}" </dev/null 2>/dev/null
+                fi
+                if (( $? == 0 )); then
+                    (( SYS_MOVED++ ))
+                else
+                    (( SYS_MOVE_FAILED++ ))
+                fi
+            done 3< <(scan_query "[print(x['path']) for x in d['orphaned_user_files'] if x['system']]")
+            print_success "Moved $SYS_MOVED /Library items to Trash. Failed: $SYS_MOVE_FAILED."
+        else
+            print_warning "System residual cleanup skipped by user."
         fi
     fi
 

@@ -29,7 +29,7 @@
 | 🟢 [manage_node_version.sh](mac/manage_node_version.sh)             | Inspects and safely updates Node.js via active version manager.                        |
 | 🐍 [manage_python_version.sh](mac/manage_python_version.sh)         | Lists all Python installs with their packages and updates patch releases.              |
 | 📦 [list_global_node_packages.sh](mac/list_global_node_packages.sh) | Audits global NPM and PNPM packages with versions and file paths.                      |
-| 🧹 [clean_residual_app_data.sh](mac/clean_residual_app_data.sh)     | Detects and cleans orphaned caches, preferences, LaunchAgents, and package receipts.   |
+| 🧹 [clean_residual_app_data.sh](mac/clean_residual_app_data.sh)     | Cleans orphaned app data, LaunchAgents, receipts, and general junk (never Downloads). |
 | ⚡ [manage_pnpm.sh](mac/manage_pnpm.sh)                             | Checks, updates, installs, or repairs PNPM safely.                                     |
 | 🧹 [manage_npm.sh](mac/manage_npm.sh)                               | Checks, updates, or repairs NPM isolated to its active release line.                   |
 
@@ -105,8 +105,12 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 # Audit orphaned residual files from uninstalled applications (Read-only)
 ./mac/clean_residual_app_data.sh
 
-# Interactively clean orphaned caches, preferences, LaunchAgents/LaunchDaemons & package receipts
-# (system-level services in /Library require sudo; you will be prompted for your password)
+# Interactively clean (each category asks for confirmation):
+#  - orphaned app data in ~/Library and /Library (Containers, Caches, Preferences, Cookies...), moved to Trash
+#  - orphaned LaunchAgents/LaunchDaemons & package receipts
+#  - general junk: caches, logs, Xcode/simulator caches, npm cache, Trash, iOS backups, Time Machine snapshots
+# ~/Downloads is never touched. /Library items and snapshots require sudo.
+# iOS backups and snapshots always ask for manual confirmation, even with --yes.
 ./mac/clean_residual_app_data.sh --clean
 ```
 
