@@ -172,7 +172,9 @@ Write-Host "pnpm:            $pnpmVersion" -ForegroundColor $script:ColorMuted
 try {
     Write-Host ""
     Write-Host "Fetching release information from nodejs.org..." -ForegroundColor $script:ColorMuted
-    $releases = @(Get-RemoteJson -Uri "https://nodejs.org/dist/index.json")
+    # Ignore pre-release entries (alpha/beta/rc/nightly) such as v27.0.0-alpha.0.1.0
+    $releases = @(Get-RemoteJson -Uri "https://nodejs.org/dist/index.json" |
+        Where-Object { [string]$_.version -match '^v\d+\.\d+\.\d+$' })
     if ($releases.Count -eq 0) { throw "The release list is empty." }
 
     $latestCurrent = $releases[0]

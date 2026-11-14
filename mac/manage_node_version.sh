@@ -92,21 +92,27 @@ fi
 # conventional tool for this. Fall back to node only if jq is unavailable.
 if command_exists jq; then
     RELEASE_INFO="$(print -rn -- "$RELEASES_JSON" | jq -r --arg major "$CURRENT_MAJOR" '
-        if (type != "array") or (length == 0) then empty else
-        (.[0]) as $current |
-        (map(select(.lts != false)) | first) as $lts |
-        (map(select(.version | startswith("v" + $major + "."))) | first) as $sameMajor |
+        if (type != "array") then empty else
+        # Ignore pre-release entries (alpha/beta/rc/nightly) such as v27.0.0-alpha.0.1.0
+        map(select(.version | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))) as $stable |
+        if ($stable | length) == 0 then empty else
+        ($stable | .[0]) as $current |
+        ($stable | map(select(.lts != false)) | first) as $lts |
+        ($stable | map(select(.version | startswith("v" + $major + "."))) | first) as $sameMajor |
         if ($current == null or $lts == null or $sameMajor == null) then empty else
         [$current.version, $lts.version, $lts.lts, $sameMajor.version] | @tsv
-        end end
+        end end end
     ')"
     PARSE_STATUS=$?
 else
     print_warning "jq not found; falling back to Node.js to parse release data."
     RELEASE_INFO="$(print -rn -- "$RELEASES_JSON" | CURRENT_MAJOR="$CURRENT_MAJOR" node -e '
 const fs = require("fs");
-const releases = JSON.parse(fs.readFileSync(0, "utf8"));
-if (!Array.isArray(releases) || releases.length === 0) process.exit(2);
+const all = JSON.parse(fs.readFileSync(0, "utf8"));
+if (!Array.isArray(all)) process.exit(2);
+// Ignore pre-release entries (alpha/beta/rc/nightly) such as v27.0.0-alpha.0.1.0
+const releases = all.filter((release) => /^v\d+\.\d+\.\d+$/.test(release.version));
+if (releases.length === 0) process.exit(2);
 const current = releases[0];
 const lts = releases.find((release) => release.lts);
 const sameMajor = releases.find((release) => release.version.startsWith(`v${process.env.CURRENT_MAJOR}.`));
