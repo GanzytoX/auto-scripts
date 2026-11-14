@@ -97,6 +97,21 @@ INSTALLED_VERSIONS_RAW="$({
     if command_exists brew; then
         brew list --versions 2>/dev/null | awk '/^python(@[0-9]+\.[0-9]+)? / { for (i = 2; i <= NF; i++) print $i }'
     fi
+
+    if command_exists uv; then
+        uv python list --only-installed 2>/dev/null | awk '{ print $1 }' | sed -nE 's/^cpython-([0-9]+\.[0-9]+\.[0-9]+).*/\1/p'
+    fi
+
+    # Any other interpreter on PATH or in well-known locations (system, Xcode, python.org, etc.)
+    for candidate in \
+        ${^${(s/:/)PATH}}/python3(N-*) \
+        ${^${(s/:/)PATH}}/python3.<->(N-*) \
+        /usr/bin/python3(N-*) \
+        /Library/Frameworks/Python.framework/Versions/*/bin/python3(N-*) \
+        /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/*/bin/python3(N-*) \
+        /Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/*/bin/python3(N-*); do
+        "$candidate" -c 'import platform; print(platform.python_version())' 2>/dev/null
+    done
 } | "$PYTHON_BIN" -c '
 import re
 import sys
