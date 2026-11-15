@@ -108,7 +108,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 # Interactively clean (each category asks for confirmation):
 #  - orphaned app data in ~/Library and /Library (Containers, Caches, Preferences, Cookies...), moved to Trash
 #  - orphaned LaunchAgents/LaunchDaemons & package receipts
-#  - general junk: caches, logs, Xcode/simulator caches, npm cache, Trash, iOS backups, Time Machine snapshots
+#  - general junk: caches, logs, npm cache, Trash, iOS backups, Time Machine snapshots
 # ~/Downloads is never touched. /Library items and snapshots require sudo.
 # iOS backups and snapshots always ask for manual confirmation, even with --yes.
 ./mac/clean_residual_app_data.sh --clean
