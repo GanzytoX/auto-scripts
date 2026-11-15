@@ -428,6 +428,7 @@ def log_kids(root):
 junk_defs = [
     ("user_caches", "User caches (active apps)", False, False, kids(os.path.join(LIB, "Caches"), True)),
     ("user_logs", "User logs & crash reports", False, False, log_kids(os.path.join(LIB, "Logs"))),
+    ("xcode_devsupport", "Xcode iOS DeviceSupport (re-downloads on connect)", False, False, kids(os.path.join(LIB, "Developer", "Xcode", "iOS DeviceSupport"))),
     ("npm_cache", "npm cache (~/.npm/_cacache)", False, False, kids(os.path.join(HOME, ".npm", "_cacache"))),
     ("system_caches", "System caches (/Library/Caches)", True, False, kids("/Library/Caches", True)),
     ("system_logs", "System logs (/Library/Logs)", True, False, log_kids("/Library/Logs")),
