@@ -25,7 +25,7 @@
 | 📋 [get_system_info.sh](mac/get_system_info.sh)                     | Hardware, OS, battery, GPU, disk, network, and runtime audit (`--brief`, `--json`).    |
 | 🍺 [list_homebrew_inventory.sh](mac/list_homebrew_inventory.sh)     | Lists all Homebrew formulae, casks, taps, and services configured.                     |
 | 🧾 [list_installed_software.sh](mac/list_installed_software.sh)     | Audits macOS apps, Homebrew packages, PATH entries, executables, and package receipts. |
-| 🔄 [update_homebrew_packages.sh](mac/update_homebrew_packages.sh)   | Checks and upgrades Homebrew packages with dry-run support.                            |
+| 🔄 [update_homebrew_packages.sh](mac/update_homebrew_packages.sh)   | Upgrades Homebrew (incl. self-updating casks), reports failures, auto-cleans.          |
 | 🟢 [manage_node_version.sh](mac/manage_node_version.sh)             | Inspects and safely updates Node.js via active version manager.                        |
 | 🐍 [manage_python_version.sh](mac/manage_python_version.sh)         | Lists all Python installs with their packages and updates patch releases.              |
 | 📦 [list_global_node_packages.sh](mac/list_global_node_packages.sh) | Audits global NPM and PNPM packages with versions and file paths.                      |
@@ -125,7 +125,8 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 # Dry-run Homebrew update check
 ./mac/update_homebrew_packages.sh --dry-run
 
-# Interactive Homebrew upgrade
+# Interactive Homebrew upgrade: greedy by default (--no-greedy to skip self-updating casks),
+# per-package failure report, deprecated-package warnings, automatic autoremove + cleanup
 ./mac/update_homebrew_packages.sh
 
 # Check Node.js and Python status (Read-only)
