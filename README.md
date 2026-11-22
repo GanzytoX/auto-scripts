@@ -22,7 +22,7 @@
 
 | Script                                                              | Description                                                                            |
 | :------------------------------------------------------------------ | :------------------------------------------------------------------------------------- |
-| 📋 [get_system_info.sh](mac/get_system_info.sh)                     | Hardware, OS, battery, GPU, disk, network, and runtime audit (`--brief`, `--json`).    |
+| 📋 [get_system_info.sh](mac/get_system_info.sh)                     | Hardware, display Hz, battery, disk, network, security, auto-detected dev tools. |
 | 🍺 [list_homebrew_inventory.sh](mac/list_homebrew_inventory.sh)     | Lists all Homebrew formulae, casks, taps, and services configured.                     |
 | 🧾 [list_installed_software.sh](mac/list_installed_software.sh)     | Audits macOS apps, Homebrew packages, PATH entries, executables, and package receipts. |
 | 🔄 [update_homebrew_packages.sh](mac/update_homebrew_packages.sh)   | Upgrades Homebrew (incl. self-updating casks), reports failures, auto-cleans.          |
@@ -83,7 +83,8 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 <summary><b>System Audit & Inventory</b></summary>
 
 ```zsh
-# Complete hardware & OS diagnostic report
+# Complete hardware & OS diagnostic report (per-display resolution and refresh rate in Hz, memory use,
+# security status, and developer tools auto-detected from PATH, Homebrew and user bin dirs)
 ./mac/get_system_info.sh
 
 # Concise summary or JSON export for automation
