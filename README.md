@@ -27,7 +27,7 @@
 | 🧾 [list_installed_software.sh](mac/list_installed_software.sh)     | Audits macOS apps, Homebrew packages, PATH entries, executables, and package receipts. |
 | 🔄 [update_homebrew_packages.sh](mac/update_homebrew_packages.sh)   | Upgrades Homebrew (incl. self-updating casks), reports failures, auto-cleans.          |
 | 🟢 [manage_node_version.sh](mac/manage_node_version.sh)             | Updates Node.js via brew, pnpm, fnm, nvm, n, volta, asdf or mise, and verifies it. |
-| 🐍 [manage_python_version.sh](mac/manage_python_version.sh)         | Lists all Python installs with their packages and updates patch releases.              |
+| 🐍 [manage_python_version.sh](mac/manage_python_version.sh)         | Detects every Python install (brew, pyenv, uv, conda, Xcode...), EOL status, updates. |
 | 📦 [list_global_node_packages.sh](mac/list_global_node_packages.sh) | Audits global NPM and PNPM packages with versions and file paths.                      |
 | 🧹 [clean_residual_app_data.sh](mac/clean_residual_app_data.sh)     | Cleans orphaned app data, LaunchAgents, receipts, and general junk (never Downloads). |
 | ⚡ [manage_pnpm.sh](mac/manage_pnpm.sh)                             | Checks, updates, installs, or repairs PNPM safely.                                     |
@@ -139,7 +139,12 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 # Perform Node.js or Python update via detected manager
 ./mac/manage_node_version.sh --update
-./mac/manage_python_version.sh --update
+./mac/manage_python_version.sh --update   # updates every outdated install that has a supported manager
+
+# Move to the next / latest Python series with the same manager, then keep or fully remove the old one
+./mac/manage_python_version.sh --jump next --dry-run    # preview only
+./mac/manage_python_version.sh --jump latest --from 3.14
+./mac/manage_python_version.sh --jump 3.15 --remove-old   # asks before deleting anything
 
 # Check/Repair NPM or PNPM
 ./mac/manage_pnpm.sh --check   # exit status 10 = update available (also for manage_node_version.sh without --update)
