@@ -11,6 +11,7 @@ usage() {
     print -r -- "Usage: $SCRIPT_NAME [--update] [--yes]"
     print -r -- "  --update  Offer to install the latest patch in the active major line."
     print -r -- "  --yes     Confirm the update non-interactively (requires --update)."
+    print -r -- "Exit status: 0 up to date or updated, 1 error, $EXIT_UPDATE_AVAILABLE update available (not installed)."
 }
 
 while (( $# > 0 )); do
@@ -52,8 +53,8 @@ if ! is_valid_version "$CURRENT_VERSION"; then
     exit 1
 fi
 
-NODE_PATH="$(command -v node)"
-NODE_REAL_PATH="${NODE_PATH:A}"
+NODE_BIN_PATH="$(command -v node)"   # not NODE_PATH: that is a Node.js env variable
+NODE_REAL_PATH="${NODE_BIN_PATH:A}"
 CURRENT_MAJOR="${CURRENT_VERSION%%.*}"
 
 print -r -- "${BLUE}Current version:${NC} v$CURRENT_VERSION"
@@ -61,11 +62,15 @@ print -r -- "${BLUE}Active executable:${NC} $NODE_REAL_PATH"
 
 MANAGER="unknown"
 BREW_FORMULA=""
-case "$NODE_REAL_PATH" in
+# Match both the raw and the resolved path: shims (volta, mise, asdf) resolve to the manager binary.
+case "$NODE_BIN_PATH|$NODE_REAL_PATH" in
     */Library/pnpm/*|*/.local/share/pnpm/*) MANAGER="pnpm" ;;
-    */.fnm/*|*/fnm_multishells/*) MANAGER="fnm" ;;
+    */.fnm/*|*/fnm_multishells/*|*/.local/share/fnm/*) MANAGER="fnm" ;;
     */.nvm/*) MANAGER="nvm" ;;
     */n/versions/node/*) MANAGER="n" ;;
+    */.volta/*) MANAGER="volta" ;;
+    */.asdf/*) MANAGER="asdf" ;;
+    */mise/*|*/.mise/*) MANAGER="mise" ;;
 esac
 
 if [[ "$MANAGER" == "unknown" ]] && command_exists brew; then
@@ -144,6 +149,11 @@ print -r -- "${GREEN}Latest LTS:${NC}     v$LATEST_LTS ($LTS_NAME)"
 print -r -- "${YELLOW}Latest Current:${NC} v$LATEST_CURRENT"
 print -r -- "${BLUE}Latest v$CURRENT_MAJOR patch:${NC} v$LATEST_SAME_MAJOR"
 
+LTS_MAJOR="${LATEST_LTS%%.*}"
+if (( LTS_MAJOR > CURRENT_MAJOR )); then
+    print_warning "Active major v$CURRENT_MAJOR is older than the current LTS line v$LTS_MAJOR; this script only updates within v$CURRENT_MAJOR."
+fi
+
 if ! version_is_newer "$LATEST_SAME_MAJOR" "$CURRENT_VERSION"; then
     print_success "Node.js v$CURRENT_MAJOR is already up to date."
     exit 0
@@ -152,7 +162,7 @@ fi
 print_warning "A newer v$CURRENT_MAJOR patch is available: v$CURRENT_VERSION -> v$LATEST_SAME_MAJOR"
 if (( ! UPDATE_REQUESTED )); then
     print_info "Run '${0:A} --update' to install it with the detected manager."
-    exit 0
+    exit $EXIT_UPDATE_AVAILABLE
 fi
 
 if ! confirm "Install Node.js v$LATEST_SAME_MAJOR using $MANAGER?"; then
@@ -167,12 +177,13 @@ case "$MANAGER" in
             exit 1
         fi
         print_info "Installing Node.js v$LATEST_SAME_MAJOR with pnpm runtime..."
-        pnpm runtime set node "$LATEST_SAME_MAJOR" --global || exit 1
+        run_step "pnpm runtime set node $LATEST_SAME_MAJOR" pnpm runtime set node "$LATEST_SAME_MAJOR" --global || exit 1
     ;;
     fnm)
         command_exists fnm || { print_error "fnm is not available in this shell."; exit 1; }
         print_info "Installing Node.js v$LATEST_SAME_MAJOR with fnm..."
-        fnm install "$LATEST_SAME_MAJOR" && fnm default "$LATEST_SAME_MAJOR" || exit 1
+        run_step "fnm install $LATEST_SAME_MAJOR" fnm install "$LATEST_SAME_MAJOR" || exit 1
+        run_step "fnm default $LATEST_SAME_MAJOR" fnm default "$LATEST_SAME_MAJOR" || exit 1
     ;;
     nvm)
         NVM_SCRIPT_DIR="${NVM_DIR:-$HOME/.nvm}"
@@ -181,21 +192,59 @@ case "$MANAGER" in
         fi
         command_exists nvm || { print_error "nvm could not be loaded."; exit 1; }
         print_info "Installing Node.js v$LATEST_SAME_MAJOR with nvm..."
-        nvm install "$LATEST_SAME_MAJOR" && nvm alias default "$LATEST_SAME_MAJOR" || exit 1
+        run_step "nvm install $LATEST_SAME_MAJOR" nvm install "$LATEST_SAME_MAJOR" || exit 1
+        run_step "nvm alias default $LATEST_SAME_MAJOR" nvm alias default "$LATEST_SAME_MAJOR" || exit 1
     ;;
     n)
         command_exists n || { print_error "n is not available in this shell."; exit 1; }
         print_info "Installing Node.js v$LATEST_SAME_MAJOR with n..."
-        n "$LATEST_SAME_MAJOR" || exit 1
+        run_step "n $LATEST_SAME_MAJOR" n "$LATEST_SAME_MAJOR" || exit 1
+    ;;
+    volta)
+        command_exists volta || { print_error "volta is not available in this shell."; exit 1; }
+        print_info "Installing Node.js v$LATEST_SAME_MAJOR with volta..."
+        run_step "volta install node@$LATEST_SAME_MAJOR" volta install "node@$LATEST_SAME_MAJOR" || exit 1
+    ;;
+    asdf)
+        command_exists asdf || { print_error "asdf is not available in this shell."; exit 1; }
+        print_info "Installing Node.js v$LATEST_SAME_MAJOR with asdf..."
+        run_step "asdf install nodejs $LATEST_SAME_MAJOR" asdf install nodejs "$LATEST_SAME_MAJOR" || exit 1
+        # asdf >= 0.16 replaced 'asdf global' with 'asdf set'.
+        if asdf set --help >/dev/null 2>&1; then
+            run_step "asdf set --home nodejs $LATEST_SAME_MAJOR" asdf set --home nodejs "$LATEST_SAME_MAJOR" || exit 1
+        else
+            run_step "asdf global nodejs $LATEST_SAME_MAJOR" asdf global nodejs "$LATEST_SAME_MAJOR" || exit 1
+        fi
+    ;;
+    mise)
+        command_exists mise || { print_error "mise is not available in this shell."; exit 1; }
+        print_info "Installing Node.js v$LATEST_SAME_MAJOR with mise..."
+        run_step "mise use --global node@$LATEST_SAME_MAJOR" mise use --global "node@$LATEST_SAME_MAJOR" || exit 1
     ;;
     brew)
+        # Formula "node" is unversioned: it is only safe when Homebrew still offers the same major.
         if [[ "$BREW_FORMULA" == "node" ]]; then
-            print_error "The active Homebrew formula is unversioned. 'brew upgrade node' could cross major versions, so it was not run."
-            print -r -- "Use Homebrew directly if you intend to upgrade to its current Node.js major."
-            exit 1
+            BREW_AVAILABLE=""
+            if command_exists jq; then
+                BREW_AVAILABLE="$(brew info --json=v2 node 2>/dev/null | jq -r '.formulae[0].versions.stable // empty')"
+            fi
+            if [[ -z "$BREW_AVAILABLE" ]]; then
+                print_error "Could not read the version Homebrew offers for 'node' (jq missing or brew info failed); nothing was changed."
+                exit 1
+            fi
+            if [[ "${BREW_AVAILABLE%%.*}" != "$CURRENT_MAJOR" ]]; then
+                print_error "Homebrew's 'node' formula is now v$BREW_AVAILABLE, a different major than your v$CURRENT_MAJOR; 'brew upgrade node' would cross major versions, so it was not run."
+                print -r -- "To stay on v$CURRENT_MAJOR: brew install node@$CURRENT_MAJOR (versioned formula). To move to v${BREW_AVAILABLE%%.*}: brew upgrade node"
+                exit 1
+            fi
+            if ! version_is_newer "$BREW_AVAILABLE" "$CURRENT_VERSION"; then
+                print_error "Homebrew still offers v$BREW_AVAILABLE for 'node' (latest upstream v$LATEST_SAME_MAJOR); the formula has not caught up yet. Nothing was changed."
+                exit 1
+            fi
+            LATEST_SAME_MAJOR_TARGET="$BREW_AVAILABLE"
         fi
         print_info "Upgrading $BREW_FORMULA with Homebrew..."
-        brew upgrade "$BREW_FORMULA" || exit 1
+        run_step "brew upgrade $BREW_FORMULA" brew upgrade "$BREW_FORMULA" || exit 1
     ;;
     *)
         print_error "The active Node.js installation is not managed by a supported manager."
@@ -203,4 +252,22 @@ case "$MANAGER" in
     ;;
 esac
 
-print_success "Node.js v$LATEST_SAME_MAJOR was installed successfully."
+# Verify what the active node reports now, instead of assuming the command worked.
+rehash
+EXPECTED="${LATEST_SAME_MAJOR_TARGET:-$LATEST_SAME_MAJOR}"
+NEW_VERSION="$(node --version 2>/dev/null)"
+NEW_VERSION="${NEW_VERSION#v}"
+if [[ "$NEW_VERSION" == "$EXPECTED" ]]; then
+    print_success "Node.js v$NEW_VERSION is now active."
+    exit 0
+fi
+case "$MANAGER" in
+    fnm|nvm|volta|asdf|mise)
+        print_warning "Node.js v$EXPECTED was installed and set as default, but this shell still reports v${NEW_VERSION:-unknown}. Open a new terminal to use it."
+        exit 0
+    ;;
+    *)
+        print_error "The update command succeeded but the active node still reports v${NEW_VERSION:-unknown} (expected v$EXPECTED)."
+        exit 1
+    ;;
+esac

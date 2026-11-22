@@ -11,6 +11,7 @@ usage() {
     print -r -- "Usage: $SCRIPT_NAME [--check] [--yes]"
     print -r -- "  --check  Only report whether an update is available."
     print -r -- "  --yes    Confirm the update or repair non-interactively."
+    print -r -- "Exit status: 0 up to date or updated, 1 error, $EXIT_UPDATE_AVAILABLE update available (--check)."
 }
 
 while (( $# > 0 )); do
@@ -87,7 +88,15 @@ if ! REGISTRY_JSON="$(fetch_url 'https://registry.npmjs.org/pnpm/latest')"; then
     exit 1
 fi
 
-LATEST_VERSION="$(print -rn -- "$REGISTRY_JSON" | sed -nE 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p')"
+# Parse the top-level "version" key properly; never regex over the JSON.
+if command_exists jq; then
+    LATEST_VERSION="$(print -rn -- "$REGISTRY_JSON" | jq -r '.version // empty' 2>&1)"
+elif command_exists python3; then
+    LATEST_VERSION="$(print -rn -- "$REGISTRY_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("version",""))' 2>&1)"
+else
+    print_error "jq or python3 is required to read the npm registry response."
+    exit 1
+fi
 if ! is_valid_version "$LATEST_VERSION"; then
     print_error "The npm registry returned an invalid pnpm version: ${LATEST_VERSION:-<empty>}"
     exit 1
@@ -105,7 +114,7 @@ if (( CHECK_ONLY )); then
     else
         print_warning "pnpm needs to be repaired. Latest available version: $LATEST_VERSION"
     fi
-    exit 0
+    exit $EXIT_UPDATE_AVAILABLE
 fi
 
 if [[ "$MANAGER" == "unknown" ]]; then
@@ -128,7 +137,7 @@ fi
 case "$MANAGER" in
     brew)
         print_info "Updating pnpm with Homebrew..."
-        brew upgrade pnpm || exit 1
+        run_step "brew upgrade pnpm" brew upgrade pnpm || exit 1
     ;;
     corepack)
         if (( PNPM_WORKS != 0 )); then
@@ -136,11 +145,11 @@ case "$MANAGER" in
             exit 1
         fi
         print_info "Updating pnpm with Corepack..."
-        corepack install --global "pnpm@$LATEST_VERSION" || exit 1
+        run_step "corepack install --global pnpm@$LATEST_VERSION" corepack install --global "pnpm@$LATEST_VERSION" || exit 1
     ;;
     npm)
         print_info "Updating pnpm with npm..."
-        npm install --global "pnpm@$LATEST_VERSION" || exit 1
+        run_step "npm install --global pnpm@$LATEST_VERSION" npm install --global "pnpm@$LATEST_VERSION" || exit 1
     ;;
     standalone)
         if (( PNPM_WORKS == 0 )); then
@@ -151,9 +160,9 @@ case "$MANAGER" in
                 pnpm self-update "$LATEST_VERSION"
             )
             UPDATE_STATUS=$?
-            rmdir "$SAFE_WORKDIR" 2>/dev/null || true
+            rmdir "$SAFE_WORKDIR" || print_warning "Could not remove temporary directory: $SAFE_WORKDIR"
             if (( UPDATE_STATUS != 0 )); then
-                print_error "pnpm self-update failed; no alternative installation method was attempted."
+                print_error "FAILED: pnpm self-update $LATEST_VERSION (exit status $UPDATE_STATUS); no alternative installation method was attempted."
                 exit 1
             fi
         else
@@ -164,9 +173,14 @@ case "$MANAGER" in
                 print_error "The pnpm installer could not be downloaded."
                 exit 1
             fi
-            if ! /bin/sh "$INSTALLER_FILE"; then
+            if [[ ! -s "$INSTALLER_FILE" ]] || [[ "$(head -c 2 "$INSTALLER_FILE")" != "#!" ]]; then
                 rm -f "$INSTALLER_FILE"
-                print_error "The official pnpm installer failed."
+                print_error "The downloaded pnpm installer is empty or is not a shell script; it was not executed."
+                exit 1
+            fi
+            print_info "Installer sha256: $(shasum -a 256 "$INSTALLER_FILE" | cut -d' ' -f1)"
+            if ! run_step "official pnpm installer (get.pnpm.io/install.sh)" /bin/sh "$INSTALLER_FILE"; then
+                rm -f "$INSTALLER_FILE"
                 exit 1
             fi
             rm -f "$INSTALLER_FILE"

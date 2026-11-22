@@ -84,3 +84,20 @@ version_is_newer() {
     autoload -Uz is-at-least
     ! is-at-least "$candidate" "$current"
 }
+
+# Exit status used by check-style scripts when an update is available (0 = up to date, 1 = error).
+readonly EXIT_UPDATE_AVAILABLE=10
+
+# run_step <description> <command...>
+# Runs the command with its output visible; on failure prints what failed and the exit status.
+run_step() {
+    local desc="$1"
+    shift
+    "$@"
+    local rc=$?
+    if (( rc != 0 )); then
+        print_error "FAILED: $desc (exit status $rc)"
+        print_error "  command: $*"
+    fi
+    return $rc
+}

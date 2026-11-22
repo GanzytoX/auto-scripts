@@ -26,7 +26,7 @@
 | 🍺 [list_homebrew_inventory.sh](mac/list_homebrew_inventory.sh)     | Lists all Homebrew formulae, casks, taps, and services configured.                     |
 | 🧾 [list_installed_software.sh](mac/list_installed_software.sh)     | Audits macOS apps, Homebrew packages, PATH entries, executables, and package receipts. |
 | 🔄 [update_homebrew_packages.sh](mac/update_homebrew_packages.sh)   | Upgrades Homebrew (incl. self-updating casks), reports failures, auto-cleans.          |
-| 🟢 [manage_node_version.sh](mac/manage_node_version.sh)             | Inspects and safely updates Node.js via active version manager.                        |
+| 🟢 [manage_node_version.sh](mac/manage_node_version.sh)             | Updates Node.js via brew, pnpm, fnm, nvm, n, volta, asdf or mise, and verifies it. |
 | 🐍 [manage_python_version.sh](mac/manage_python_version.sh)         | Lists all Python installs with their packages and updates patch releases.              |
 | 📦 [list_global_node_packages.sh](mac/list_global_node_packages.sh) | Audits global NPM and PNPM packages with versions and file paths.                      |
 | 🧹 [clean_residual_app_data.sh](mac/clean_residual_app_data.sh)     | Cleans orphaned app data, LaunchAgents, receipts, and general junk (never Downloads). |
@@ -141,7 +141,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ./mac/manage_python_version.sh --update
 
 # Check/Repair NPM or PNPM
-./mac/manage_pnpm.sh --check
+./mac/manage_pnpm.sh --check   # exit status 10 = update available (also for manage_node_version.sh without --update)
 ./mac/manage_npm.sh --check
 ./mac/manage_pnpm.sh
 ./mac/manage_npm.sh
