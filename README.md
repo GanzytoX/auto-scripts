@@ -111,6 +111,8 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 #  - general junk: caches, logs, Xcode iOS DeviceSupport cache, npm cache, Trash, iOS backups, Time Machine snapshots
 # ~/Downloads is never touched. /Library items and snapshots require sudo.
 # iOS backups and snapshots always ask for manual confirmation, even with --yes.
+# Any failed operation is printed with the real system error and repeated in a final summary.
+# Items macOS protects (Apple caches, Microsoft/Shortcuts group containers) are skipped, not reported as orphans.
 ./mac/clean_residual_app_data.sh --clean
 ```
 

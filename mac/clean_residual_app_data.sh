@@ -9,6 +9,17 @@ print_warning() {
     print -r -- "${YELLOW}$*${NC}"
 }
 
+# Every failed operation is logged verbatim (command + real error) and printed in a final summary.
+typeset -a FAIL_LOG=()
+# log_failure <action> <path> <error output>
+log_failure() {
+    local err="${3//$'\n'/ | }"
+    [[ -z "$err" ]] && err="(no error output; exit status unknown)"
+    FAIL_LOG+=("$1: $2 -> $err")
+    print -r -- "${RED}  FAILED: $1: $2${NC}"
+    print -r -- "${RED}    reason: $err${NC}"
+}
+
 CLEAN_MODE=0
 DRY_RUN_MODE=1
 AUTO_YES=0
@@ -80,12 +91,17 @@ remove_path() {
         print_warning "Skipped protected path: $p"
         return 1
     fi
+    local err
     if (( use_sudo )) && (( EUID != 0 )); then
-        sudo rm -rf -- "$p" </dev/null 2>/dev/null
+        err="$(sudo rm -rf -- "$p" </dev/null 2>&1)"
     else
-        rm -rf -- "$p" 2>/dev/null
+        err="$(rm -rf -- "$p" 2>&1)"
     fi
-    [[ ! -e "$p" && ! -L "$p" ]]
+    if [[ -e "$p" || -L "$p" ]]; then
+        log_failure "rm" "$p" "$err"
+        return 1
+    fi
+    return 0
 }
 
 # Like confirm, but --yes never auto-approves (for irreversible deletions).
@@ -223,7 +239,7 @@ SYSTEM_WHITELIST = {
     "diagnostics_agent", "diagnosticreports", "assistant", "sentrycrash", "io.sentry",
     "kingfisher", "cctclearcutlogger", "electron", "electron-builder", "databases", "websitedata",
     "localstorage", "indexeddb", "gpucache", "code cache", "blob_storage", "default", "crashpad",
-    "installer_telemetry", "intelligence", "mobilesync"
+    "installer_telemetry", "intelligence", "mobilesync", "logging", "is.workflow.my.app", "mcxtools"
 }
 
 DEV_TOOLS = {
@@ -237,6 +253,10 @@ DEV_TOOLS = {
 
 def is_safe_or_active(item_name):
     lower = item_name.lower().strip()
+    # Team-ID prefixed Group Containers (e.g. UBF8T346G9.Office) belong to the vendor
+    # of any installed app; Microsoft Team ID is UBF8T346G9.
+    if lower.startswith("ubf8t346g9.") and any("microsoft" in b for b in installed_bundles):
+        return True
     clean = re.sub(r"[^a-z0-9]", "", lower)
     if not clean:
         return True
@@ -399,6 +419,9 @@ for pkg in pkgs:
 
 orphan_paths = {o["path"] for o in orphaned_user_files}
 
+# Apple system caches that macOS protects (rm fails with "Operation not permitted")
+APPLE_PROTECTED_CACHES = {"cloudkit", "familycircle", "familycircled"}
+
 def kids(path, skip_apple=False):
     out = []
     try:
@@ -408,7 +431,7 @@ def kids(path, skip_apple=False):
     for n in names:
         if n.startswith("."):
             continue
-        if skip_apple and n.lower().startswith("com.apple."):
+        if skip_apple and (n.lower().startswith("com.apple.") or n.lower() in APPLE_PROTECTED_CACHES):
             continue
         fp = os.path.join(path, n)
         if fp in orphan_paths or protected(fp):
@@ -653,12 +676,13 @@ if (( CLEAN_MODE )); then
         if confirm_strict "Delete $TM_COUNT Time Machine local snapshots (requires administrator privileges)?"; then
             while IFS= read -r -u3 snap; do
                 if (( EUID == 0 )); then
-                    tmutil deletelocalsnapshots "$snap" </dev/null >/dev/null 2>&1
+                    tm_err="$(tmutil deletelocalsnapshots "$snap" </dev/null 2>&1)"
                 else
-                    sudo tmutil deletelocalsnapshots "$snap" </dev/null >/dev/null 2>&1
+                    tm_err="$(sudo tmutil deletelocalsnapshots "$snap" </dev/null 2>&1)"
                 fi
+                (( $? != 0 )) && log_failure "tmutil deletelocalsnapshots" "$snap" "$tm_err"
             done 3< <(scan_query "[print(x) for x in d['tm_snapshots']]")
-            print_success "Local snapshots deletion attempted."
+            print_success "Local snapshots deletion finished."
         else
             print_warning "Time Machine snapshots skipped."
         fi
@@ -668,7 +692,7 @@ if (( CLEAN_MODE )); then
     if (( USER_ORPHAN_COUNT > 0 )); then
         if confirm "Move $USER_ORPHAN_COUNT orphaned user files/caches to Trash?"; then
             TRASH_DIR="$HOME/.Trash/residual_apps_$(date +%Y%m%d_%H%M%S)"
-            mkdir -p "$TRASH_DIR" 2>/dev/null
+            mkdir -p "$TRASH_DIR" || log_failure "mkdir" "$TRASH_DIR" "could not create Trash folder"
             CLEANED_COUNT=0
             FAILED_COUNT=0
             while IFS= read -r -u3 item_path; do
@@ -677,10 +701,12 @@ if (( CLEAN_MODE )); then
                     print_warning "Skipped protected path: $item_path"
                     continue
                 fi
-                if mv "$item_path" "$TRASH_DIR/${CLEANED_COUNT}_${item_path:t}" 2>/dev/null; then
+                mv_err="$(mv "$item_path" "$TRASH_DIR/${CLEANED_COUNT}_${item_path:t}" 2>&1)"
+                if (( $? == 0 )); then
                     (( CLEANED_COUNT++ ))
                 else
                     (( FAILED_COUNT++ ))
+                    log_failure "mv to Trash" "$item_path" "$mv_err"
                 fi
             done 3< <(scan_query "[print(x['path']) for x in d['orphaned_user_files'] if not x['system']]")
             print_success "Moved $CLEANED_COUNT items to Trash ($TRASH_DIR). Failed: $FAILED_COUNT."
@@ -693,7 +719,7 @@ if (( CLEAN_MODE )); then
     if (( SYS_ORPHAN_COUNT > 0 )); then
         if confirm "Move $SYS_ORPHAN_COUNT orphaned /Library items to Trash (requires administrator privileges)?"; then
             TRASH_DIR="${TRASH_DIR:-$HOME/.Trash/residual_apps_$(date +%Y%m%d_%H%M%S)}"
-            mkdir -p "$TRASH_DIR" 2>/dev/null
+            mkdir -p "$TRASH_DIR" || log_failure "mkdir" "$TRASH_DIR" "could not create Trash folder"
             SYS_MOVED=0
             SYS_MOVE_FAILED=0
             while IFS= read -r -u3 item_path; do
@@ -703,14 +729,15 @@ if (( CLEAN_MODE )); then
                     continue
                 fi
                 if (( EUID == 0 )); then
-                    mv "$item_path" "$TRASH_DIR/sys_${SYS_MOVED}_${item_path:t}" 2>/dev/null
+                    mv_err="$(mv "$item_path" "$TRASH_DIR/sys_${SYS_MOVED}_${item_path:t}" 2>&1)"
                 else
-                    sudo mv "$item_path" "$TRASH_DIR/sys_${SYS_MOVED}_${item_path:t}" </dev/null 2>/dev/null
+                    mv_err="$(sudo mv "$item_path" "$TRASH_DIR/sys_${SYS_MOVED}_${item_path:t}" </dev/null 2>&1)"
                 fi
                 if (( $? == 0 )); then
                     (( SYS_MOVED++ ))
                 else
                     (( SYS_MOVE_FAILED++ ))
+                    log_failure "sudo mv to Trash" "$item_path" "$mv_err"
                 fi
             done 3< <(scan_query "[print(x['path']) for x in d['orphaned_user_files'] if x['system']]")
             print_success "Moved $SYS_MOVED /Library items to Trash. Failed: $SYS_MOVE_FAILED."
@@ -727,10 +754,14 @@ if (( CLEAN_MODE )); then
             if confirm "Move orphaned user LaunchAgents to Trash?"; then
                 while IFS= read -r lpath; do
                     [[ -z "$lpath" || ! -e "$lpath" ]] && continue
-                    launchctl bootout "gui/$(id -u)" "$lpath" 2>/dev/null
-                    mv "$lpath" "$HOME/.Trash/" 2>/dev/null || rm -f "$lpath" 2>/dev/null
+                    launchctl bootout "gui/$(id -u)" "$lpath" >/dev/null 2>&1   # not loaded is expected
+                    la_err="$(mv "$lpath" "$HOME/.Trash/" 2>&1)"
+                    if (( $? != 0 )); then
+                        la_err="$la_err $(rm -f "$lpath" 2>&1)"
+                        [[ -e "$lpath" ]] && log_failure "mv/rm LaunchAgent" "$lpath" "$la_err"
+                    fi
                 done <<< "$USER_LAUNCH_ITEMS"
-                print_success "Orphaned user LaunchAgents moved to Trash."
+                print_success "Orphaned user LaunchAgents processed."
             fi
         fi
 
@@ -749,11 +780,12 @@ if (( CLEAN_MODE )); then
                     else
                         launchctl bootout "gui/$(id -u)" "$lpath" </dev/null 2>/dev/null
                     fi
-                    if "${SUDO_CMD[@]}" rm -f "$lpath" </dev/null; then
+                    rm_err="$("${SUDO_CMD[@]}" rm -f "$lpath" </dev/null 2>&1)"
+                    if (( $? == 0 )); then
                         (( SYS_REMOVED++ ))
                     else
                         (( SYS_FAILED++ ))
-                        print_error "Failed to remove: $lpath"
+                        log_failure "rm" "$lpath" "$rm_err"
                     fi
                 done <<< "$SYSTEM_LAUNCH_ITEMS"
                 if (( SYS_FAILED == 0 )); then
@@ -773,9 +805,10 @@ if (( CLEAN_MODE )); then
         if (( EUID == 0 )); then
             if confirm "Forget $ORPHAN_RECEIPTS_COUNT orphaned package receipts from macOS database?"; then
                 for r_pkg in ${(z)RECEIPTS_LIST}; do
-                    pkgutil --forget "$r_pkg" 2>/dev/null
+                    pk_err="$(pkgutil --forget "$r_pkg" 2>&1)"
+                    (( $? != 0 )) && log_failure "pkgutil --forget" "$r_pkg" "$pk_err"
                 done
-                print_success "Orphaned package receipts forgotten successfully."
+                print_success "Package receipts processed."
             fi
         else
             print
@@ -785,5 +818,12 @@ if (( CLEAN_MODE )); then
     fi
 
     print
-    print_success "Cleanup operations completed."
+    if (( ${#FAIL_LOG[@]} > 0 )); then
+        print -r -- "${RED}=== ${#FAIL_LOG[@]} operation(s) FAILED ===${NC}"
+        for f in "${FAIL_LOG[@]}"; do print -r -- "${RED}  - $f${NC}"; done
+        print -r -- "${YELLOW}Failed items will show up again on the next audit.${NC}"
+        print_warning "Cleanup finished WITH ERRORS."
+    else
+        print_success "Cleanup operations completed."
+    fi
 fi
